@@ -1,6 +1,6 @@
-# GridPlanning.jl
+# PowerGridPlanning.jl
 
-[![CI](https://github.com/rpiansky3/GridPlanning.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/rpiansky3/GridPlanning.jl/actions/workflows/ci.yml)
+[![CI](https://github.com/rpiansky3/PowerGridPlanning.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/rpiansky3/PowerGridPlanning.jl/actions/workflows/ci.yml)
 
 A Julia package for transmission grid planning on realistic power system networks. Provides DC and linearized AC formulations for co-optimizing line switching, line hardening, battery storage siting, and solar PV siting against load shedding, cost, and risk-exposure objectives. Applications include planning under severe-weather risk such as wildfires, with built-in support for USGS Fire Potential Index data.
 
@@ -50,16 +50,16 @@ This package provides a unified interface for transmission grid planning problem
 **Option A — install directly via Julia Pkg (no clone needed):**
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/rpiansky3/GridPlanning.jl")
-using GridPlanning
+Pkg.add(url="https://github.com/rpiansky3/PowerGridPlanning.jl")
+using PowerGridPlanning
 ```
 
 **Option B — clone and develop locally:**
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/rpiansky3/GridPlanning.jl.git
-cd GridPlanning.jl
+git clone https://github.com/rpiansky3/PowerGridPlanning.jl.git
+cd PowerGridPlanning.jl
 ```
 
 2. Instantiate the package environment:
@@ -69,15 +69,15 @@ julia --project=. -e 'using Pkg; Pkg.instantiate()'
 
 3. Test the installation:
 ```julia
-julia --project=. -e 'using GridPlanning; println("OK")'
+julia --project=. -e 'using PowerGridPlanning; println("OK")'
 ```
 
 ## Repository Structure
 
 ```
-GridPlanning.jl/
+PowerGridPlanning.jl/
 ├── src/
-│   ├── GridPlanning.jl             # Main module and solve_ots() function
+│   ├── PowerGridPlanning.jl             # Main module and solve_ots() function
 │   ├── preprocessing.jl            # Time parsing, data loading, load generation
 │   ├── add_variables.jl            # Variable definitions for DCOTS and LACOTS
 │   ├── add_constraints.jl          # Power flow and operational constraints
@@ -317,7 +317,7 @@ When using the thresholded method with hardening enabled, switching and hardenin
 The repository ships with a reference dataset in `test_data/` covering June 2020 for all six networks. Use `:data_dir => "test_data"` to run immediately after cloning — no additional data download required.
 
 ```julia
-using GridPlanning
+using PowerGridPlanning
 
 # Works out of the box using the included test_data/ reference dataset
 opt_parameters = Dict(
@@ -356,7 +356,7 @@ Then open `tutorial.ipynb` from the Jupyter file browser.
 
 ## Command-Line Interface
 
-For users who prefer working from the terminal, GridPlanning includes a command-line interface (CLI) via the `scripts/run_ots.jl` script.
+For users who prefer working from the terminal, PowerGridPlanning includes a command-line interface (CLI) via the `scripts/run_ots.jl` script.
 
 ### Basic CLI Usage
 
@@ -610,7 +610,7 @@ Status: OPTIMAL | Time: 0.35s | Load Shed: 125.43 MW | Risk Reduction: 50.0%
 The main function is `solve_ots(opt_parameters)` which takes a single dictionary and returns a results dictionary.
 
 ```julia
-using GridPlanning
+using PowerGridPlanning
 results = solve_ots(opt_parameters)
 ```
 
@@ -847,7 +847,7 @@ plot_results(results_list, [:tradeoff_curve]; format="pdf", output_dir="figures/
 ### Example 1: Basic DCOTS with Tradeoff Objective
 
 ```julia
-using GridPlanning
+using PowerGridPlanning
 
 opt_parameters = Dict(
     :network => "RTS",
@@ -1180,7 +1180,7 @@ end
 You can bypass automatic data loading by providing your own wildfire risk data via the `:risk_per_line` parameter. This is useful for custom risk models, sensitivity analysis, or external data sources.
 
 ```julia
-using GridPlanning
+using PowerGridPlanning
 
 # Define custom risk: Dict{day_index => Dict{line_id => risk_value}}
 custom_risk = Dict{Int, Dict{Int, Float64}}(
@@ -1222,7 +1222,7 @@ println("Risk reduction: $(results[:risk_reduction_pct])%")
 Jointly optimize solar PV, battery storage, and line hardening under a shared infrastructure budget.
 
 ```julia
-using GridPlanning
+using PowerGridPlanning
 
 opt_parameters = Dict(
     :network => "RTS",
@@ -1262,7 +1262,7 @@ println("Load shed: $(results[:total_load_shed]) MW")
 Trigger plotting automatically at the end of `solve_ots()` using the `:plots` and `:plot_dir` parameters, without calling `plot_results()` separately.
 
 ```julia
-using GridPlanning
+using PowerGridPlanning
 
 # "all" generates network_overview + relevant timeseries plots
 opt_parameters = Dict(
@@ -1293,7 +1293,7 @@ results = solve_ots(opt_parameters)
 Solar PV installation planning with real solar irradiance data and inverter reactive power capability in the LACOTS model.
 
 ```julia
-using GridPlanning
+using PowerGridPlanning
 
 # LACOTS solar with reactive power support
 opt_parameters = Dict(
@@ -1377,7 +1377,7 @@ Or via `Pkg.test()`:
 
 ```julia
 using Pkg
-Pkg.test("GridPlanning")
+Pkg.test("PowerGridPlanning")
 ```
 
 These tests cover package loading, reference data file existence, CSV column structure, and parameter validation. They do not invoke the Gurobi solver.
@@ -1397,11 +1397,11 @@ This runs 18 test groups covering DCOTS, LACOTS, battery planning, solar plannin
 If you use this package in your research, please cite:
 
 ```bibtex
-@software{GridPlanning_jl_2025,
+@software{PowerGridPlanning_jl_2025,
   author = {Piansky, Ryan},
-  title = {GridPlanning.jl: Wildfire-Informed Transmission Switching Optimization},
+  title = {PowerGridPlanning.jl: Wildfire-Informed Transmission Switching Optimization},
   year = {2025},
-  url = {https://github.com/rpiansky3/GridPlanning.jl}
+  url = {https://github.com/rpiansky3/PowerGridPlanning.jl}
 }
 ```
 
@@ -1411,7 +1411,7 @@ This package is released under the [MIT License](LICENSE).
 
 ## Contact
 
-For questions, bug reports, or feature requests, please open an issue on the [GitHub repository](https://github.com/rpiansky3/GridPlanning.jl/issues).
+For questions, bug reports, or feature requests, please open an issue on the [GitHub repository](https://github.com/rpiansky3/PowerGridPlanning.jl/issues).
 
 ## Acknowledgments
 

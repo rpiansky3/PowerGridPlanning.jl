@@ -1,7 +1,7 @@
 #!/usr/bin/env julia
 
 """
-Command-line interface for GridPlanning package.
+Command-line interface for PowerGridPlanning package.
 Run wildfire-aware transmission switching optimizations from the terminal.
 
 Usage:
@@ -9,7 +9,7 @@ Usage:
 """
 
 using ArgParse
-using GridPlanning
+using PowerGridPlanning
 using Dates
 using Printf
 

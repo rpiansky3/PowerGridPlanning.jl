@@ -1,4 +1,4 @@
-using GridPlanning
+using PowerGridPlanning
 using JLD2
 
 pass_count = 0

@@ -7,7 +7,7 @@
 using Pkg
 Pkg.activate(joinpath(@__DIR__, ".."))
 
-using GridPlanning
+using PowerGridPlanning
 import Plots
 Plots.gr()  # ensure GR backend; GKSwstype=nul must be set in environment before launch
 

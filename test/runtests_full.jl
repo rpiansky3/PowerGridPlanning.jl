@@ -9,7 +9,7 @@
 using Pkg
 Pkg.activate(joinpath(@__DIR__, ".."))
 
-using GridPlanning
+using PowerGridPlanning
 using JuMP
 using CSV
 using DataFrames

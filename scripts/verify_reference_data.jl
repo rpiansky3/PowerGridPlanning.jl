@@ -14,7 +14,7 @@ so the test focuses on data loading and model construction rather than solution 
 using Pkg
 Pkg.activate(joinpath(@__DIR__, ".."))
 
-using GridPlanning
+using PowerGridPlanning
 
 const NETWORKS = ["RTS", "CATS", "Texas7k", "Texas2k", "WECC10k", "WECC240"]
 const TEST_DATE = (2020, 6, 15)  # June 15, 2020 — available for all 6 networks

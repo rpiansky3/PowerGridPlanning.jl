@@ -7,11 +7,11 @@
 
 using Test
 using DataFrames
-using GridPlanning
+using PowerGridPlanning
 
-const _hav = GridPlanning.haversine_m
-const _centroid = GridPlanning.tract_centroid
-const _assign = GridPlanning.assign_population
+const _hav = PowerGridPlanning.haversine_m
+const _centroid = PowerGridPlanning.tract_centroid
+const _assign = PowerGridPlanning.assign_population
 
 @testset "haversine_m" begin
     @test _hav(0.0, 0.0, 0.0, 0.0) ≈ 0.0 atol=1e-6
@@ -168,7 +168,7 @@ end
         (tract_geoid="T2", bus_id=1, weight=0.7, distance_m=0.0, assigned_population=140.0),
         (tract_geoid="T2", bus_id=2, weight=0.3, distance_m=0.0, assigned_population=60.0),
     ]
-    rows = GridPlanning.aggregate_tract_to_bus(tract_rows, assignments)
+    rows = PowerGridPlanning.aggregate_tract_to_bus(tract_rows, assignments)
     @test length(rows) == 2
     byb = Dict(r.Bus_ID => r for r in rows)
 
@@ -203,7 +203,7 @@ end
             df = CSV.read(out_path, DataFrame; types=Dict(:Bus_ID=>Int))
             @test nrow(df) > 0
 
-            lb = GridPlanning.load_buses_with_load("RTS"; data_dir="test_data")
+            lb = PowerGridPlanning.load_buses_with_load("RTS"; data_dir="test_data")
             @test !isempty(lb)
             assigned = Set(df.Bus_ID)
             # Every load bus appears at least once

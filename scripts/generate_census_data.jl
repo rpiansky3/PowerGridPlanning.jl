@@ -33,7 +33,7 @@ const BASE_DIR = dirname(@__DIR__)
 
 import Pkg
 Pkg.activate(BASE_DIR)
-using GridPlanning
+using PowerGridPlanning
 
 const ALL_NETWORKS = ["RTS", "WECC240", "texas2k", "Texas7k", "WECC10k", "CATS"]
 

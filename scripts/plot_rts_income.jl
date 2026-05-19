@@ -8,7 +8,7 @@
 using Pkg
 Pkg.activate(dirname(@__DIR__))
 
-using GridPlanning
+using PowerGridPlanning
 using DataFrames
 using CSV
 using Plots
@@ -35,14 +35,14 @@ if !isempty(income_by_bus)
 end
 
 # ── Base plot, branches, tract outlines ─────────────────────────────────────
-p, ref, bus_coords, bus_xy = GridPlanning.build_geo_context(NET, "RTS — Median Household Income by Bus")
+p, ref, bus_coords, bus_xy = PowerGridPlanning.build_geo_context(NET, "RTS — Median Household Income by Bus")
 
-config = GridPlanning.network_plot_config(NET)
-shapes, geoids = GridPlanning.load_census_tracts(collect(config.states))
+config = PowerGridPlanning.network_plot_config(NET)
+shapes, geoids = PowerGridPlanning.load_census_tracts(collect(config.states))
 
 # Restrict outlines to the exact tract set the CSV was generated from
 # (per-bus 25 km centroid filter, matching get_network_census).
-used_tracts = GridPlanning.load_network_tracts_near_buses(NET; radius_m=25_000.0)
+used_tracts = PowerGridPlanning.load_network_tracts_near_buses(NET; radius_m=25_000.0)
 used_geoids = Set(String(t.geoid) for t in used_tracts)
 
 ox, oy = Float64[], Float64[]

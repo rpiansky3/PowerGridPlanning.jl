@@ -1,4 +1,4 @@
-module GridPlanning
+module PowerGridPlanning
 
 using JuMP
 using Gurobi

@@ -1,6 +1,6 @@
 # Test that load_solar_capacity_factors falls back to month+day matching
 # when the exact year in times_array doesn't match the CSV reference year (2019).
-using GridPlanning
+using PowerGridPlanning
 using CSV, DataFrames, Dates
 
 println("TEST: Solar preprocessing month+day fallback")
@@ -30,7 +30,7 @@ opt_params = Dict(
     :solar_capacity_factor_default => 0.0,
 )
 
-solar_cf = GridPlanning.load_solar_capacity_factors(opt_params, solar_locs, times_array, T)
+solar_cf = PowerGridPlanning.load_solar_capacity_factors(opt_params, solar_locs, times_array, T)
 
 # Hour 12 should have CF=0.5 (from the 2019 data matched by month+day)
 cf_noon_bus1 = get(solar_cf, (1, 12, 1), -1.0)

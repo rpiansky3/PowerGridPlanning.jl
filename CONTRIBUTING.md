@@ -1,4 +1,4 @@
-# Contributing to GridPlanning.jl
+# Contributing to PowerGridPlanning.jl
 
 ## Reporting bugs
 
@@ -25,8 +25,8 @@ Open an issue describing the use case. See the open roadmap issues for features 
 ## Dev environment
 
 ```bash
-git clone https://github.com/rpiansky3/GridPlanning.jl.git
-cd GridPlanning.jl
+git clone https://github.com/rpiansky3/PowerGridPlanning.jl.git
+cd PowerGridPlanning.jl
 julia --project=. -e 'using Pkg; Pkg.instantiate()'
 ```
 

@@ -15,7 +15,7 @@ Load US state boundary shapes for basemap plotting.
 Returns a Vector of Plots.Shape objects (one per polygon part) for the requested states.
 """
 function load_us_basemap(states::Vector{String})
-    base_path = something(pkgdir(GridPlanning), dirname(dirname(@__FILE__)))
+    base_path = something(pkgdir(PowerGridPlanning), dirname(dirname(@__FILE__)))
     shp_path = joinpath(base_path, "data", "US_Shapefiles", "cb_2018_us_state_500k.shp")
     dbf_path = joinpath(base_path, "data", "US_Shapefiles", "cb_2018_us_state_500k.dbf")
 
@@ -68,7 +68,7 @@ entry per polygon part, paired by index. Graceful @warn + empty return if
 the shapefile is missing.
 """
 function load_census_tracts(states::Vector{String})
-    base_path = something(pkgdir(GridPlanning), dirname(dirname(@__FILE__)))
+    base_path = something(pkgdir(PowerGridPlanning), dirname(dirname(@__FILE__)))
     shp_path = joinpath(base_path, "data", "US_Shapefiles", "cb_2023_us_tract_500k.shp")
     dbf_path = joinpath(base_path, "data", "US_Shapefiles", "cb_2023_us_tract_500k.dbf")
 

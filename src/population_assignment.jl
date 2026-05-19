@@ -78,7 +78,7 @@ centroid_lat, centroid_lng`. Warns and returns an empty vector if the
 shapefile is missing.
 """
 function load_network_tracts_near_buses(network_name::String; radius_m::Float64=25_000.0)
-    base_path = something(pkgdir(GridPlanning), dirname(dirname(@__FILE__)))
+    base_path = something(pkgdir(PowerGridPlanning), dirname(dirname(@__FILE__)))
     shp_path = joinpath(base_path, "data", "US_Shapefiles", "cb_2023_us_tract_500k.shp")
     dbf_path = joinpath(base_path, "data", "US_Shapefiles", "cb_2023_us_tract_500k.dbf")
 
@@ -444,7 +444,7 @@ function get_network_census(network_name::String;
         isempty(api_key) && @warn "No CENSUS_API_KEY set — using anonymous ACS (~500 req/day)"
     end
 
-    base_path = something(pkgdir(GridPlanning), dirname(dirname(@__FILE__)))
+    base_path = something(pkgdir(PowerGridPlanning), dirname(dirname(@__FILE__)))
     if isempty(output_path)
         output_path = joinpath(base_path, data_dir, "census_data",
                                "$(network_name)_census_$(acs_year).csv")

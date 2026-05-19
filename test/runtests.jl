@@ -13,15 +13,15 @@
 using Test
 using CSV
 using DataFrames
-using GridPlanning
+using PowerGridPlanning
 
 const PROJECT_ROOT = dirname(@__DIR__)
 const TEST_DATA    = joinpath(PROJECT_ROOT, "test_data")
 
 # ── 1. Package load ───────────────────────────────────────────────────────────
 @testset "Package loads" begin
-    @test GridPlanning.solve_ots isa Function
-    @test GridPlanning.plot_results isa Function
+    @test PowerGridPlanning.solve_ots isa Function
+    @test PowerGridPlanning.plot_results isa Function
 end
 
 # ── 2. Network files ──────────────────────────────────────────────────────────

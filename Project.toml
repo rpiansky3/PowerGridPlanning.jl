@@ -1,5 +1,5 @@
-name = "GridPlanning"
-uuid = "f5e13df1-e776-4bef-88e9-4ff92826c373"
+name = "PowerGridPlanning"
+uuid = "a7220958-9516-4853-85d5-0fc586ce8da1"
 version = "0.1.0"
 authors = ["Ryan Piansky <@rpiansky3>"]
 
