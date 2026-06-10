@@ -102,8 +102,14 @@ function preprocess(opt_parameters::Dict)
         end
     end
 
-    # Load wildfire data if not provided
-    if haskey(opt_parameters, :risk_per_line) && opt_parameters[:risk_per_line] !== nothing
+    # Load wildfire data if not provided.
+    # OPF-only models (DCOPF/LACOPF) ignore wildfire risk entirely — install an
+    # empty per-day risk dict so downstream code sees zero risky lines.
+    if is_opf_only(opt_parameters[:model])
+        opt_parameters[:wildfire_data] = Dict{Int,Dict{Int,Float64}}(d => Dict{Int,Float64}() for d in 1:D)
+        preprocessed[:wildfire_data_loaded] = false
+        println("✓ OPF-only model ($(opt_parameters[:model])): wildfire risk disabled")
+    elseif haskey(opt_parameters, :risk_per_line) && opt_parameters[:risk_per_line] !== nothing
         # User provided custom risk data - validate structure
         validate_risk_per_line(opt_parameters[:risk_per_line], D)
         opt_parameters[:wildfire_data] = opt_parameters[:risk_per_line]

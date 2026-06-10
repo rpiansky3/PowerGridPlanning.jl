@@ -11,9 +11,11 @@ function run_optimization(opt_parameters::Dict, preprocessed::Dict)
     model_type = opt_parameters[:model]
     warm_start = opt_parameters[:warm_start]
 
-    # Handle auto warm start for LACOTS
-    if model_type == "LACOTS" && warm_start == "auto"
-        println("Running DCOTS first for warm start...")
+    # Handle auto warm start for linear-AC models (LACOTS/LACOPF).
+    # For OPF-only models there is no z (switching) variable, but hardening warm
+    # starts can still help; the DC counterpart is solved as DCOTS or DCOPF.
+    if base_formulation(model_type) == "LACOTS" && warm_start == "auto"
+        println("Running DC counterpart first for warm start...")
         warm_start_dict = run_dcots_for_warmstart(opt_parameters, preprocessed)
         opt_parameters[:warm_start] = warm_start_dict
     end
@@ -31,9 +33,9 @@ Run DCOTS to generate warm start values for LACOTS.
 Includes both z (switching) and y (hardening) values if hardening is enabled.
 """
 function run_dcots_for_warmstart(opt_parameters::Dict, preprocessed::Dict)
-    # Create a copy of opt_parameters for DCOTS
+    # Create a copy of opt_parameters for the DC counterpart
     dcots_params = copy(opt_parameters)
-    dcots_params[:model] = "DCOTS"
+    dcots_params[:model] = opt_parameters[:model] == "LACOPF" ? "DCOPF" : "DCOTS"
     dcots_params[:warm_start] = nothing
     dcots_params[:output_format] = "dict"
 
@@ -290,8 +292,8 @@ function extract_results(model::JuMP.Model, preprocessed::Dict, opt_parameters::
             results[:p_discharge][(d, t, i)] = value(p_discharge[d, t, i])
         end
 
-        # Extract reactive power variables (LACOTS only)
-        if model_type == "LACOTS"
+        # Extract reactive power variables (linear-AC formulations only)
+        if base_formulation(model_type) == "LACOTS"
             # Extract battery reactive power charge (q_charge)
             q_charge = model[:q_charge]
             results[:q_charge] = Dict{Tuple,Float64}()
@@ -339,8 +341,8 @@ function extract_results(model::JuMP.Model, preprocessed::Dict, opt_parameters::
             results[:p_solar][(d, t, n)] = value(p_solar[d, t, n])
         end
 
-        # Extract solar reactive power (LACOTS only)
-        if model_type == "LACOTS"
+        # Extract solar reactive power (linear-AC formulations only)
+        if base_formulation(model_type) == "LACOTS"
             q_solar = model[:q_solar]
             results[:q_solar] = Dict{Tuple,Float64}()
             for d in 1:D, t in 1:T, n in solar_locs
@@ -375,8 +377,8 @@ function extract_results(model::JuMP.Model, preprocessed::Dict, opt_parameters::
         results[:p][(d, t, (l, i, j))] = value(p[d, t, (l, i, j)])
     end
 
-    if model_type == "DCOTS"
-        # DCOTS-specific results
+    if base_formulation(model_type) == "DCOTS"
+        # DC formulation results (DCOTS, DCOPF)
         load_shedding = model[:load_shedding]
         g = model[:g]
 
@@ -393,7 +395,7 @@ function extract_results(model::JuMP.Model, preprocessed::Dict, opt_parameters::
         # Calculate aggregate metrics
         results[:total_load_shed] = sum(results[:load_shedding])
 
-    else  # LACOTS
+    else  # LACOTS / LACOPF
         # LACOTS-specific results
         p_load_shedding = model[:p_load_shedding]
         q_load_shedding = model[:q_load_shedding]
@@ -433,8 +435,8 @@ function extract_results(model::JuMP.Model, preprocessed::Dict, opt_parameters::
     end
 
     # Calculate risk metrics
-    # Total risk is sum of all risk values across all days
-    total_risk = sum(sum(values(wf_data[d])) for d in 1:D)
+    # Total risk is sum of all risk values across all days (zero for OPF-only models)
+    total_risk = sum(sum(values(wf_data[d]); init=0.0) for d in 1:D; init=0.0)
 
     # Active risk is risk from energized lines (z=1 means energized)
     # If hardening is enabled, reduce risk by effectiveness factor for hardened lines
@@ -462,7 +464,7 @@ function extract_results(model::JuMP.Model, preprocessed::Dict, opt_parameters::
     results[:total_risk] = total_risk
     results[:active_risk] = active_risk
     results[:removed_risk] = removed_risk
-    results[:risk_reduction_pct] = (removed_risk / total_risk) * 100
+    results[:risk_reduction_pct] = total_risk > 0 ? (removed_risk / total_risk) * 100 : 0.0
 
     # Lines that were switched off (per day)
     # Uses results[:z] which already accounts for hardened lines being re-energized.

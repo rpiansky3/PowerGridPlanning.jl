@@ -10,9 +10,9 @@ Add all constraints based on model type (DCOTS or LACOTS).
 function add_constraints!(model::JuMP.Model, preprocessed::Dict, opt_parameters::Dict, flow_exprs::Dict)
     model_type = opt_parameters[:model]
 
-    if model_type == "DCOTS"
+    if base_formulation(model_type) == "DCOTS"
         add_dcots_constraints!(model, preprocessed, opt_parameters, flow_exprs[:p_expr])
-    else  # LACOTS
+    else  # LACOTS / LACOPF
         add_lacots_constraints!(model, preprocessed, opt_parameters, flow_exprs[:p_expr], flow_exprs[:q_expr])
     end
 end

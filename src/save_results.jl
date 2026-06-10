@@ -344,9 +344,9 @@ function write_load_shedding_summary(io::IO, results::Dict)
     println(io, "Load Shedding Summary:")
     println(io, "-" ^ 40)
 
-    if results[:model_type] == "DCOTS"
+    if base_formulation(results[:model_type]) == "DCOTS"
         @printf(io, "  Total Load Shed:     %.4f MW-hours\n", results[:total_load_shed])
-    else  # LACOTS
+    else  # LACOTS / LACOPF
         @printf(io, "  Total P Load Shed:   %.4f MW-hours\n", results[:total_p_load_shed])
         @printf(io, "  Total Q Load Shed:   %.4f MVAr-hours\n", results[:total_q_load_shed])
     end
@@ -355,7 +355,7 @@ function write_load_shedding_summary(io::IO, results::Dict)
     D = results[:D]
     T = results[:T]
 
-    if results[:model_type] == "DCOTS"
+    if base_formulation(results[:model_type]) == "DCOTS"
         ls = results[:load_shedding]
         for d in 1:D
             day_shed = sum(ls[d, t, i] for t in 1:T for i in axes(ls, 3))
@@ -669,8 +669,8 @@ function write_all_variables(io::IO, results::Dict)
         println(io)
     end
 
-    if model_type == "DCOTS"
-        # DCOTS variables
+    if base_formulation(model_type) == "DCOTS"
+        # DC-formulation variables (DCOTS, DCOPF)
         if haskey(results, :load_shedding)
             println(io, "[load_shedding - Active Power Load Shedding (MW)]")
             write_variable_data(io, results[:load_shedding], "load_shedding")
@@ -689,7 +689,7 @@ function write_all_variables(io::IO, results::Dict)
             println(io)
         end
 
-    else  # LACOTS
+    else  # LACOTS / LACOPF
         # Voltage magnitudes
         if haskey(results, :vm)
             println(io, "[vm - Voltage Magnitudes (p.u.)]")

@@ -235,6 +235,11 @@ filter that strips zero-risk lines (which are still valid for coloring).
 Falls back to an empty dict gracefully if data is unavailable.
 """
 function load_plot_risk_data(results::Dict)
+    # OPF-only models (DCOPF/LACOPF) have no wildfire risk by construction;
+    # skip the disk load to avoid loading risk data unrelated to the run.
+    model_type = get(results, :model_type, "")
+    is_opf_only(model_type) && return Dict{Int,Float64}()
+
     network = get(results, :network, "")
     times   = get(results, :times, nothing)
     (isempty(network) || times === nothing) && return Dict{Int,Float64}()

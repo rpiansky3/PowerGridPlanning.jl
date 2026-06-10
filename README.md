@@ -29,7 +29,7 @@ A Julia package for transmission grid planning on realistic power system network
 This package provides a unified interface for transmission grid planning problems on realistic power system networks. Operational decisions (line switching) and capital investments (line hardening, battery storage siting, solar PV siting) are co-optimized under a single objective — load shedding, generation cost, risk exposure, or a weighted tradeoff. The per-line risk interface is hazard-agnostic; the package ships with built-in data loaders for severe-weather risk applications, currently wildfire risk via the USGS Fire Potential Index.
 
 **Key Features:**
-- **Two formulations**: DC Optimal Transmission Switching (DCOTS) and Linear AC Optimal Transmission Switching (LACOTS)
+- **Four formulations**: wildfire-aware switching (DCOTS, LACOTS) and pure power-flow baselines (DCOPF, LACOPF) sharing the same investment-planning interface
 - **Multiple objective functions**: Load shedding minimization, risk-exposure minimization, generation cost minimization, and customizable tradeoffs
 - **Two switching methods**: Optimal MIP-based and fast thresholded heuristic
 - **Line hardening**: Optimize infrastructure investments (vegetation management, covered conductors, or undergrounding) to permanently reduce per-line risk exposure
@@ -79,7 +79,7 @@ PowerGridPlanning.jl/
 ├── src/
 │   ├── PowerGridPlanning.jl             # Main module and solve_ots() function
 │   ├── preprocessing.jl            # Time parsing, data loading, load generation
-│   ├── add_variables.jl            # Variable definitions for DCOTS and LACOTS
+│   ├── add_variables.jl            # Variable definitions for DCOTS/LACOTS (and DCOPF/LACOPF)
 │   ├── add_constraints.jl          # Power flow and operational constraints
 │   ├── add_objective.jl            # Objective function formulations
 │   ├── base_OPS.jl                 # Core optimization solver
@@ -256,6 +256,15 @@ Wildfire risk data is automatically loaded from the USGS Fire Potential Index (F
 - More accurate representation of AC power systems
 - Can warm-start from DCOTS solution for faster convergence (includes z and y values)
 
+#### DCOPF / LACOPF (Pure Power Flow — no wildfire switching)
+- Same DC / linearized-AC formulations as DCOTS / LACOTS, but with all wildfire-risk machinery disabled:
+  no binary `z` switching variables, no risk threshold, no auto-loaded wildfire data
+- Lines are never de-energized to mitigate risk — useful as a no-action baseline or for studies that
+  shouldn't be biased by wildfire considerations
+- Investment options (battery, solar, hardening) still apply and are co-optimized as usual
+- Allowed objectives: `"loadshed"` and `"cost"` only (`"wildfire"` and `"tradeoff"` require risk data)
+- LACOPF can warm-start from DCOPF (`:warm_start => "auto"`)
+
 ### Solution Methods
 
 #### Optimal Method (default)
@@ -278,12 +287,12 @@ Wildfire risk data is automatically loaded from the USGS Fire Potential Index (F
 
 ### Objective Functions
 
-| Objective | Description | Primary Term | Secondary Term |
-|-----------|-------------|--------------|----------------|
-| `"loadshed"` | Minimize load shedding | Total load shed | Small switching cost penalty |
-| `"wildfire"` | Minimize wildfire risk | Normalized active risk | Small load shedding penalty |
-| `"cost"` | Minimize operational cost | Generation cost + VOLL × load shed | N/A |
-| `"tradeoff"` | Weighted combination | (1-w) × normalized load shed | w × normalized risk |
+| Objective | Description | Primary Term | Secondary Term | OPF-only models |
+|-----------|-------------|--------------|----------------|-----------------|
+| `"loadshed"` | Minimize load shedding | Total load shed | Small switching cost penalty | ✅ |
+| `"wildfire"` | Minimize wildfire risk | Normalized active risk | Small load shedding penalty | ❌ (requires risk) |
+| `"cost"` | Minimize operational cost | Generation cost + VOLL × load shed | N/A | ✅ |
+| `"tradeoff"` | Weighted combination | (1-w) × normalized load shed | w × normalized risk | ❌ (requires risk) |
 
 ### Line Hardening
 
@@ -377,7 +386,7 @@ julia --project=. scripts/run_ots.jl --network RTS --objective loadshed --date 2
 - `--year, -y` - Full year (e.g., "2020")
 
 **Model and Method:**
-- `--model, -m` - Model type: DCOTS or LACOTS (default: DCOTS)
+- `--model, -m` - Model type: DCOTS, LACOTS, DCOPF, or LACOPF (default: DCOTS). DCOPF/LACOPF disable wildfire switching but still support battery/solar/hardening investments.
 - `--method` - Solution method: optimal or thresholded (default: optimal)
 
 **Method Parameters:**
@@ -619,8 +628,11 @@ results = solve_ots(opt_parameters)
 ```julia
 opt_parameters = Dict(
     :network => "RTS",                    # Network name (see Available Data)
-    :model => "DCOTS",                    # "DCOTS" or "LACOTS"
-    :objective => "tradeoff",             # "loadshed", "wildfire", "cost", "tradeoff"
+    :model => "DCOTS",                    # "DCOTS", "LACOTS", "DCOPF", or "LACOPF"
+                                          #   DCOTS/LACOTS: wildfire-aware optimal transmission switching
+                                          #   DCOPF/LACOPF: pure OPF (no wildfire switching);
+                                          #                 investments still apply; objective restricted to "loadshed"/"cost"
+    :objective => "tradeoff",             # "loadshed", "wildfire", "cost", "tradeoff" (DCOPF/LACOPF: "loadshed"/"cost" only)
     :times => [(2021, 7, 15)]             # Time specification (see below)
 )
 ```
@@ -650,8 +662,8 @@ opt_parameters = Dict(
 :threshold => nothing             # Absolute risk threshold (in risk units)
 :threshold_pct => nothing         # Percentage threshold (0.8 = keep 80% of risk active, remove 20%)
 
-# LACOTS warm start
-:warm_start => nothing            # Dict from DCOTS results, or "auto" to run DCOTS first
+# Linear-AC warm start (LACOTS / LACOPF)
+:warm_start => nothing            # Dict from DCOTS/DCOPF results, or "auto" to run the DC counterpart first
 :non_linear => false              # Use non-linear apparent power constraints
 
 # Solver parameters
@@ -881,6 +893,26 @@ opt_parameters = Dict(
 )
 
 results = solve_ots(opt_parameters)
+```
+
+### Example 2b: Pure DCOPF Baseline (no wildfire switching)
+
+```julia
+# Use DCOPF when you want a true no-action baseline — lines never get
+# de-energized for risk mitigation, even under a "cost" or "loadshed" objective.
+opt_parameters = Dict(
+    :network   => "RTS",
+    :model     => "DCOPF",          # pure DC OPF; no z switching variables
+    :objective => "cost",           # generation cost + VOLL × load shed
+    :times     => [(2020, 6, 15)],
+    :data_dir  => "test_data",
+)
+
+results = solve_ots(opt_parameters)
+
+# DCOPF results have no switching: results[:switched_off_lines][d] is empty
+# and risk_reduction_pct is 0. Investment options (battery, solar, hardening)
+# can still be enabled in the same Dict.
 ```
 
 ### Example 3: Fast Thresholded Method

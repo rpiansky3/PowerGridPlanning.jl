@@ -22,15 +22,16 @@ function add_objective!(model::JuMP.Model, preprocessed::Dict, opt_parameters::D
     gen_names = metadata[:gen_names]
     risky_lines = metadata[:risky_lines]
 
-    # Calculate total load and total risk for normalization
+    # Calculate total load and total risk for normalization.
+    # For OPF-only models wf_data is empty per day, so total_risk = 0.
     total_load = calculate_total_load(preprocessed, bus_names, D, T)
-    total_risk = sum(sum(values(wf_data[d])) for d in 1:D)
+    total_risk = sum(sum(values(wf_data[d]); init=0.0) for d in 1:D; init=0.0)
 
-    # Get load shedding expression based on model type
-    if model_type == "DCOTS"
+    # Get load shedding expression based on power-flow formulation
+    if base_formulation(model_type) == "DCOTS"
         load_shedding = model[:load_shedding]
         nonneg_loadshed = sum(load_shedding[d, t, i] for d in 1:D for t in 1:T for i in bus_names)
-    else  # LACOTS
+    else  # LACOTS / LACOPF
         p_load_shedding = model[:p_load_shedding]
         nonneg_loadshed = sum(p_load_shedding[d, t, i] for d in 1:D for t in 1:T for i in bus_names)
     end
@@ -236,11 +237,11 @@ function add_cost_objective!(model::JuMP.Model, preprocessed::Dict, opt_paramete
     switching_method = get(opt_parameters, :switching_method, "optimal")
 
     # Get generation variables
-    if model_type == "DCOTS"
+    if base_formulation(model_type) == "DCOTS"
         g = model[:g]
         # Calculate generation cost using piecewise linear cost curves
         gen_cost = calculate_generation_cost(ref, g, gen_names, D, T)
-    else  # LACOTS
+    else  # LACOTS / LACOPF
         pg = model[:pg]
         gen_cost = calculate_generation_cost(ref, pg, gen_names, D, T)
     end

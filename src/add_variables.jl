@@ -40,9 +40,11 @@ function add_variables!(model::JuMP.Model, preprocessed::Dict, opt_parameters::D
         :big_M => big_M
     )
 
-    if model_type == "DCOTS"
+    # DCOPF/LACOPF share the DC/LAC variable layout but have no switching variables
+    # because risky_lines[d] is empty.
+    if base_formulation(model_type) == "DCOTS"
         return add_dcots_variables!(model, preprocessed, opt_parameters, bus_names, branch_names, gen_names, risky_lines, big_M)
-    else  # LACOTS
+    else  # LACOTS / LACOPF
         return add_lacots_variables!(model, preprocessed, opt_parameters, bus_names, branch_names, gen_names, risky_lines, big_M)
     end
 end

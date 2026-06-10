@@ -28,7 +28,7 @@ function parse_commandline()
             required = true
 
         "--model", "-m"
-            help = "Model type (DCOTS or LACOTS)"
+            help = "Model type (DCOTS, LACOTS, DCOPF, or LACOPF). DCOPF/LACOPF disable wildfire switching but still support investments."
             arg_type = String
             default = "DCOTS"
 

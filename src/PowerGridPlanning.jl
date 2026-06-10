@@ -34,6 +34,25 @@ export solve_ots, load_txt, get_network_solar_data, get_network_census, plot_res
        load_census_data
 
 """
+    is_opf_only(model_type::AbstractString) -> Bool
+
+True when the model is a pure OPF formulation (DCOPF/LACOPF) with no wildfire
+switching or risk objective. Investment options (battery, solar, hardening) still
+apply.
+"""
+is_opf_only(model_type::AbstractString) = model_type in ("DCOPF", "LACOPF")
+
+"""
+    base_formulation(model_type::AbstractString) -> String
+
+Returns the underlying power-flow formulation: "DCOTS" for DC-based models
+(DCOTS, DCOPF) or "LACOTS" for linear-AC models (LACOTS, LACOPF). Used to
+dispatch variable/constraint/extraction code.
+"""
+base_formulation(model_type::AbstractString) =
+    model_type in ("DCOTS", "DCOPF") ? "DCOTS" : "LACOTS"
+
+"""
     _maybe_plot_results(results::Dict, opt_parameters::Dict)
 
 Called automatically by solve_ots when :plots is set. Selects the appropriate
@@ -82,8 +101,11 @@ Solve an Optimal Transmission Switching problem with wildfire risk consideration
 
 # Required Parameters
 - `:network` => String - Network name (e.g., "RTS", "CATS", "Texas7k", "Texas2k", "WECC240")
-- `:model` => String - "DCOTS" or "LACOTS"
-- `:objective` => String - "loadshed", "wildfire", "cost", or "tradeoff"
+- `:model` => String - "DCOTS", "LACOTS", "DCOPF", or "LACOPF"
+    - DCOTS/LACOTS: wildfire-aware optimal transmission switching
+    - DCOPF/LACOPF: pure OPF (no wildfire risk, no line de-energization). Investment options
+      (battery, solar, hardening) still apply. Allowed objectives: "loadshed" or "cost".
+- `:objective` => String - "loadshed", "wildfire", "cost", or "tradeoff" (DCOPF/LACOPF: "loadshed" or "cost" only)
 - `:times` => Array or String - Time specification:
     - Array of tuples: [(year, month, day), ...]
     - Year string: "2020"
@@ -152,8 +174,21 @@ function validate_parameters!(opt_parameters::Dict)
     end
 
     # Validate model type
-    if !(opt_parameters[:model] in ["DCOTS", "LACOTS"])
-        error("Invalid model type: $(opt_parameters[:model]). Must be 'DCOTS' or 'LACOTS'")
+    if !(opt_parameters[:model] in ["DCOTS", "LACOTS", "DCOPF", "LACOPF"])
+        error("Invalid model type: $(opt_parameters[:model]). Must be 'DCOTS', 'LACOTS', 'DCOPF', or 'LACOPF'")
+    end
+
+    # OPF-only models do not consider wildfire risk
+    if is_opf_only(opt_parameters[:model])
+        if opt_parameters[:objective] in ("wildfire", "tradeoff")
+            error("Objective '$(opt_parameters[:objective])' requires a wildfire-aware model. Use 'DCOTS' or 'LACOTS', or pick 'loadshed'/'cost'.")
+        end
+        if get(opt_parameters, :switching_method, "optimal") == "thresholded"
+            error("switching_method='thresholded' has no effect for OPF-only models ($(opt_parameters[:model])). Drop the field or use DCOTS/LACOTS.")
+        end
+        if get(opt_parameters, :threshold, nothing) !== nothing || get(opt_parameters, :threshold_pct, nothing) !== nothing
+            error("Risk thresholds are not applicable to OPF-only models ($(opt_parameters[:model])).")
+        end
     end
 
     # Validate switching method type (optional parameter, defaults to "optimal")
