@@ -333,9 +333,11 @@ function _plot_network_overview(results::Dict;
     if !infrastructure_off
         batt_caps = [v for v in values(pd_infra["buses_w_batts"]) if v > 0]
         solar_caps = [v for v in values(pd_infra["buses_w_solar"]) if v > 0]
+        alloc_caps = [v for v in values(pd_infra["buses_w_alloc"]) if v > 1e-4]
 
         saw_batt = false
         saw_solar = false
+        saw_alloc = false
         for row in eachrow(bus_coords)
             i = row.Bus_ID
             haskey(bus_xy, i) || continue
@@ -359,6 +361,16 @@ function _plot_network_overview(results::Dict;
                 saw_solar = true
                 scatter!(p, [x], [y]; label=lbl, color=:gold,
                          marker=(:diamond, sz, 0.5, Plots.stroke(1.5, :goldenrod)))
+            end
+
+            if haskey(pd_infra["buses_w_alloc"], i) && pd_infra["buses_w_alloc"][i] > 1e-4
+                cap = pd_infra["buses_w_alloc"][i]
+                lo, hi = isempty(alloc_caps) ? (0.0,1.0) : (minimum(alloc_caps), maximum(alloc_caps))
+                sz = hi == lo ? 8.0 : 5.0 + 10.0 * (cap - lo) / (hi - lo)
+                lbl = saw_alloc ? false : "Allocated load"
+                saw_alloc = true
+                scatter!(p, [x], [y]; label=lbl, color=:steelblue,
+                         marker=(:utriangle, sz, 0.6, Plots.stroke(1.5, :navy)))
             end
         end
     end

@@ -109,6 +109,16 @@ function add_dcots_variables!(model::JuMP.Model, preprocessed::Dict, opt_paramet
             end
         end
     end
+    # Allocation: bump load shedding upper bound so allocated load can also be shed if needed
+    if haskey(opt_parameters, :allocate_mw) && opt_parameters[:allocate_mw] !== nothing
+        alloc_locs_set = Set(preprocessed[:alloc_locs])
+        allocate_pu = preprocessed[:allocate_pu]
+        for d in 1:D, t in 1:T, i in bus_names
+            if i in alloc_locs_set
+                ls_ub[d, t, i] += allocate_pu
+            end
+        end
+    end
     @variable(model, ls_lb[d, t, i] <= load_shedding[d=1:D, t=1:T, i=bus_names] <= ls_ub[d, t, i])
 
     # Voltage angles
@@ -240,6 +250,14 @@ function add_dcots_variables!(model::JuMP.Model, preprocessed::Dict, opt_paramet
         println("✓ Added solar variables for $(length(solar_locs)) candidate buses")
     end
 
+    # Load allocation variable (continuous, p.u. of new firm load per candidate bus)
+    if haskey(opt_parameters, :allocate_mw) && opt_parameters[:allocate_mw] !== nothing
+        alloc_locs = preprocessed[:alloc_locs]
+        allocate_pu = preprocessed[:allocate_pu]
+        @variable(model, 0 <= a[b in alloc_locs] <= allocate_pu)
+        println("✓ Added load allocation variables for $(length(alloc_locs)) candidate buses")
+    end
+
     # Create power flow expressions for both directions
     p_expr = Dict((d, t, (l, i, j)) => 1.0 * p[d, t, (l, i, j)] for d in 1:D for t in 1:T for (l, i, j) in branch_names)
     p_expr = merge(p_expr, Dict((d, t, (l, j, i)) => -1.0 * p[d, t, (l, i, j)] for d in 1:D for t in 1:T for (l, i, j) in branch_names))
@@ -273,6 +291,16 @@ function add_lacots_variables!(model::JuMP.Model, preprocessed::Dict, opt_parame
             pls_ub[d, t, i] = hourly_loads[d]["pd"][i][t]
         end
     end
+    # Allocation: bump load shedding upper bound so allocated load can also be shed if needed
+    if haskey(opt_parameters, :allocate_mw) && opt_parameters[:allocate_mw] !== nothing
+        alloc_locs_set = Set(preprocessed[:alloc_locs])
+        allocate_pu = preprocessed[:allocate_pu]
+        for d in 1:D, t in 1:T, i in bus_names
+            if i in alloc_locs_set
+                pls_ub[d, t, i] += allocate_pu
+            end
+        end
+    end
     @variable(model, pls_lb[d, t, i] <= p_load_shedding[d=1:D, t=1:T, i=bus_names] <= pls_ub[d, t, i])
 
     # Reactive load shedding
@@ -286,6 +314,17 @@ function add_lacots_variables!(model::JuMP.Model, preprocessed::Dict, opt_parame
             qls_ub[d, t, i] = max(0.0, sum_of_loads)
         else
             qls_ub[d, t, i] = hourly_loads[d]["qd"][i][t]
+        end
+    end
+    # Allocation: bump reactive load shedding upper bound proportionally (pf=0.95)
+    if haskey(opt_parameters, :allocate_mw) && opt_parameters[:allocate_mw] !== nothing
+        alloc_locs_set = Set(preprocessed[:alloc_locs])
+        allocate_pu = preprocessed[:allocate_pu]
+        tan_phi = tan(acos(0.95))
+        for d in 1:D, t in 1:T, i in bus_names
+            if i in alloc_locs_set
+                qls_ub[d, t, i] += allocate_pu * tan_phi
+            end
         end
     end
     @variable(model, qls_lb[d, t, i] <= q_load_shedding[d=1:D, t=1:T, i=bus_names] <= qls_ub[d, t, i])
@@ -445,6 +484,14 @@ function add_lacots_variables!(model::JuMP.Model, preprocessed::Dict, opt_parame
         @variable(model, -capacity_ub <= q_solar[d=1:D, t=1:T, n=solar_locs] <= capacity_ub)
 
         println("✓ Added solar variables for $(length(solar_locs)) candidate buses (active and reactive power)")
+    end
+
+    # Load allocation variable (continuous, p.u. of new firm load per candidate bus)
+    if haskey(opt_parameters, :allocate_mw) && opt_parameters[:allocate_mw] !== nothing
+        alloc_locs = preprocessed[:alloc_locs]
+        allocate_pu = preprocessed[:allocate_pu]
+        @variable(model, 0 <= a[b in alloc_locs] <= allocate_pu)
+        println("✓ Added load allocation variables for $(length(alloc_locs)) candidate buses")
     end
 
     # Create power flow expressions for both directions

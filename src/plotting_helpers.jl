@@ -172,6 +172,7 @@ function results_to_plot_dict(results::Dict, day::Union{Nothing,Int}=nothing)
     # Infrastructure capacities (time-independent)
     pd["buses_w_batts"] = haskey(results, :x) ? results[:x] : Dict{Int,Float64}()
     pd["buses_w_solar"] = haskey(results, :s) ? results[:s] : Dict{Int,Float64}()
+    pd["buses_w_alloc"] = haskey(results, :allocated_load) ? results[:allocated_load] : Dict{Int,Float64}()
     pd["hardened_lines"] = get(results, :hardened_lines, Int[])
 
     # Switched-off lines

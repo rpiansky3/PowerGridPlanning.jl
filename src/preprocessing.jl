@@ -36,6 +36,9 @@ function preprocess(opt_parameters::Dict)
     # Validate solar parameters early (sets defaults)
     validate_solar_parameters(opt_parameters)
 
+    # Validate allocation parameters early (sets defaults)
+    validate_allocation_parameters(opt_parameters)
+
     # Parse times into array of (year, month, day) tuples
     times_array = parse_times(opt_parameters[:times])
     D = length(times_array)  # Number of days
@@ -197,6 +200,20 @@ function preprocess(opt_parameters::Dict)
         preprocessed[:solar_cf] = solar_cf
 
         println("✓ Solar candidate buses identified: $(length(solar_locs)) buses")
+    end
+
+    # Determine allocation candidate buses if load allocation is enabled
+    if haskey(opt_parameters, :allocate_mw) && opt_parameters[:allocate_mw] !== nothing
+        println("\n--- Preparing Load Allocation ---")
+
+        alloc_locs = determine_allocation_candidate_buses(opt_parameters, ref)
+        preprocessed[:alloc_locs] = alloc_locs
+
+        base_mva = network_data["baseMVA"]
+        preprocessed[:allocate_pu] = opt_parameters[:allocate_mw] / base_mva
+
+        println("✓ Allocation candidate buses identified: $(length(alloc_locs)) buses")
+        println("  Total load to site: $(opt_parameters[:allocate_mw]) MW ($(round(preprocessed[:allocate_pu], digits=4)) p.u.)")
     end
 
     return preprocessed
@@ -1833,4 +1850,60 @@ function load_solar_capacity_factors(opt_parameters::Dict, solar_locs::Vector{In
     end
 
     return solar_cf
+end
+
+"""
+    validate_allocation_parameters(opt_parameters::Dict)
+
+Validate load allocation parameters. Does nothing if :allocate_mw is not set.
+"""
+function validate_allocation_parameters(opt_parameters::Dict)
+    if !haskey(opt_parameters, :allocate_mw) || opt_parameters[:allocate_mw] === nothing
+        return
+    end
+
+    println("\n--- Validating Load Allocation Parameters ---")
+
+    mw = opt_parameters[:allocate_mw]
+    if !(mw isa Real) || mw <= 0
+        error("allocate_mw must be a positive number, got $mw")
+    end
+
+    if haskey(opt_parameters, :allocate_candidate_buses)
+        buses = opt_parameters[:allocate_candidate_buses]
+        if buses !== nothing && !isa(buses, Vector)
+            error("allocate_candidate_buses must be a Vector{Int} or nothing")
+        end
+    end
+
+    println("✓ Allocation parameters validated: $(mw) MW to site")
+end
+
+"""
+    determine_allocation_candidate_buses(opt_parameters::Dict, ref::Dict) -> Vector{Int}
+
+Determine which buses are candidates for load allocation.
+"""
+function determine_allocation_candidate_buses(opt_parameters::Dict, ref::Dict)
+    bus_names = sort([bus for bus in keys(ref[:bus])])
+
+    if haskey(opt_parameters, :allocate_candidate_buses)
+        candidates = opt_parameters[:allocate_candidate_buses]
+
+        if candidates isa Vector
+            valid = sort(filter(b -> b in keys(ref[:bus]), candidates))
+            if length(valid) < length(candidates)
+                @warn "$(length(candidates) - length(valid)) allocation candidate buses not found in network"
+            end
+            println("  Allocation candidates: $(length(valid)) buses (user-specified)")
+            return valid
+        elseif candidates === nothing
+            # Fall through to default
+        else
+            error("allocate_candidate_buses must be a Vector{Int} or nothing")
+        end
+    end
+
+    println("  Allocation candidates: $(length(bus_names)) buses (all)")
+    return bus_names
 end

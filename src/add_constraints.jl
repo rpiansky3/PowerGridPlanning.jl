@@ -294,6 +294,26 @@ function add_dcots_constraints!(model::JuMP.Model, preprocessed::Dict, opt_param
         end
     end
 
+    # Load allocation equality constraint: all allocate_mw must be sited
+    if haskey(opt_parameters, :allocate_mw) && opt_parameters[:allocate_mw] !== nothing
+        alloc_locs = preprocessed[:alloc_locs]
+        allocate_pu = preprocessed[:allocate_pu]
+        a = model[:a]
+        @constraint(model, allocation_budget, sum(a[b] for b in alloc_locs) >= allocate_pu)
+
+        # Tighter per-bus load shedding bound: shed ≤ base_pd[b,t] + a[b]
+        load_shedding = model[:load_shedding]
+        for d in 1:D, t in 1:T, b in alloc_locs
+            base_pd = if is_cats
+                hourly_ref = preprocessed[:hourly_refs][d][t]
+                reduce(+, hourly_ref[:load][j]["pd"] for j in hourly_ref[:bus_loads][b]; init=0.0)
+            else
+                hourly_loads[d]["pd"][b][t]
+            end
+            @constraint(model, load_shedding[d, t, b] <= base_pd + a[b])
+        end
+    end
+
     # Bus power balance constraints
     for d in 1:D, t in 1:T
         for k in bus_names
@@ -326,10 +346,20 @@ function add_dcots_constraints!(model::JuMP.Model, preprocessed::Dict, opt_param
                 end
             end
 
+            # Allocated load term (flat profile, planning decision)
+            alloc_demand = 0.0
+            if haskey(opt_parameters, :allocate_mw) && opt_parameters[:allocate_mw] !== nothing
+                alloc_locs = preprocessed[:alloc_locs]
+                if k in alloc_locs
+                    a = model[:a]
+                    alloc_demand = a[k]
+                end
+            end
+
             @constraint(model,
                 sum(p_expr[(d, t, (l, i, j))] for (l, i, j) in ref[:bus_arcs][k])
                 == sum(g[d, t, m] for m in ref[:bus_gens][k])
-                - bus_load
+                - bus_load - alloc_demand
                 + load_shedding[d, t, k]
                 + battery_net_injection
                 + solar_injection
@@ -680,6 +710,30 @@ function add_lacots_constraints!(model::JuMP.Model, preprocessed::Dict, opt_para
         end
     end
 
+    # Load allocation equality constraint: all allocate_mw must be sited
+    if haskey(opt_parameters, :allocate_mw) && opt_parameters[:allocate_mw] !== nothing
+        alloc_locs = preprocessed[:alloc_locs]
+        allocate_pu = preprocessed[:allocate_pu]
+        a = model[:a]
+        @constraint(model, allocation_budget, sum(a[b] for b in alloc_locs) >= allocate_pu)
+
+        # Tighter per-bus load shedding bound: shed ≤ base_pd[b,t] + a[b]
+        p_load_shedding = model[:p_load_shedding]
+        tan_phi = tan(acos(0.95))
+        q_load_shedding = model[:q_load_shedding]
+        for d in 1:D, t in 1:T, b in alloc_locs
+            base_pd, base_qd = if is_cats
+                hourly_ref = preprocessed[:hourly_refs][d][t]
+                reduce(+, hourly_ref[:load][j]["pd"] for j in hourly_ref[:bus_loads][b]; init=0.0),
+                reduce(+, hourly_ref[:load][j]["qd"] for j in hourly_ref[:bus_loads][b]; init=0.0)
+            else
+                hourly_loads[d]["pd"][b][t], hourly_loads[d]["qd"][b][t]
+            end
+            @constraint(model, p_load_shedding[d, t, b] <= base_pd + a[b])
+            @constraint(model, q_load_shedding[d, t, b] <= base_qd + a[b] * tan_phi)
+        end
+    end
+
     # Bus power balance constraints
     for d in 1:D, t in 1:T
         for k in bus_names
@@ -720,6 +774,18 @@ function add_lacots_constraints!(model::JuMP.Model, preprocessed::Dict, opt_para
                 end
             end
 
+            # Allocated load terms (flat profile, pf=0.95 for reactive)
+            alloc_p_demand = 0.0
+            alloc_q_demand = 0.0
+            if haskey(opt_parameters, :allocate_mw) && opt_parameters[:allocate_mw] !== nothing
+                alloc_locs = preprocessed[:alloc_locs]
+                if k in alloc_locs
+                    a = model[:a]
+                    alloc_p_demand = a[k]
+                    alloc_q_demand = a[k] * tan(acos(0.95))
+                end
+            end
+
             # Proportional reactive load shedding constraint
             @constraint(model, q_load_shedding[d, t, k] <= 0.1 * p_load_shedding[d, t, k])
 
@@ -727,7 +793,7 @@ function add_lacots_constraints!(model::JuMP.Model, preprocessed::Dict, opt_para
             @constraint(model,
                 sum(p_expr[(d, t, (l, i, j))] for (l, i, j) in ref[:bus_arcs][k])
                 == sum(pg[d, t, m] for m in ref[:bus_gens][k])
-                - pd_load
+                - pd_load - alloc_p_demand
                 + p_load_shedding[d, t, k]
                 + battery_p_net_injection
                 + solar_p_injection
@@ -737,7 +803,7 @@ function add_lacots_constraints!(model::JuMP.Model, preprocessed::Dict, opt_para
             @constraint(model,
                 sum(q_expr[(d, t, (l, i, j))] for (l, i, j) in ref[:bus_arcs][k])
                 == sum(qg[d, t, m] for m in ref[:bus_gens][k])
-                - qd_load
+                - qd_load - alloc_q_demand
                 + q_load_shedding[d, t, k]
                 + battery_q_net_injection
                 + solar_q_injection

@@ -363,6 +363,20 @@ function extract_results(model::JuMP.Model, preprocessed::Dict, opt_parameters::
                                                for d in 1:D, t in 1:T, n in solar_locs)
     end
 
+    # Extract load allocation decisions if enabled
+    if haskey(opt_parameters, :allocate_mw) && opt_parameters[:allocate_mw] !== nothing
+        alloc_locs = preprocessed[:alloc_locs]
+        base_mva = preprocessed[:network_data]["baseMVA"]
+        a = model[:a]
+
+        results[:allocated_load] = Dict{Int,Float64}()
+        for b in alloc_locs
+            results[:allocated_load][b] = value(a[b])
+        end
+
+        results[:total_allocated_mw] = sum(results[:allocated_load][b] for b in alloc_locs) * base_mva
+    end
+
     # Extract voltage angles
     va = model[:va]
     results[:va] = Containers.DenseAxisArray{Float64}(undef, 1:D, 1:T, bus_names)

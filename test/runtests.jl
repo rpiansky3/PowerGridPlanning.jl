@@ -154,6 +154,20 @@ end
         :solar_enabled => true, :solar_capacity_factor_default => 1.5,
         :infrastructure_budget => 1e9,
     ))
+
+    # allocate_mw <= 0 — caught in validate_allocation_parameters()
+    @test_throws ErrorException solve_ots(Dict(
+        :network => "RTS", :model => "DCOTS", :objective => "loadshed",
+        :times => [(2020, 6, 15)], :data_dir => "test_data",
+        :allocate_mw => -100.0,
+    ))
+
+    # allocate_candidate_buses wrong type — caught in validate_allocation_parameters()
+    @test_throws ErrorException solve_ots(Dict(
+        :network => "RTS", :model => "DCOTS", :objective => "loadshed",
+        :times => [(2020, 6, 15)], :data_dir => "test_data",
+        :allocate_mw => 100.0, :allocate_candidate_buses => "all",
+    ))
 end
 
 include("test_population_assignment.jl")

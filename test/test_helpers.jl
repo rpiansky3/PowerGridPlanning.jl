@@ -180,6 +180,31 @@ function validate_nonlinear_solar(results)
     check("Nonlinear norm(P,Q) ≤ s[n] (circular capability curve)", max_viol < 1e-3)
 end
 
+# ── Allocation helpers ───────────────────────────────────────────────────────
+
+function validate_allocation(results::Dict, allocate_mw::Float64, test_name::String)
+    check("$test_name: :allocated_load present", haskey(results, :allocated_load))
+    check("$test_name: :total_allocated_mw present", haskey(results, :total_allocated_mw))
+    if haskey(results, :allocated_load) && haskey(results, :total_allocated_mw)
+        check("$test_name: total_allocated_mw >= allocate_mw",
+              results[:total_allocated_mw] >= allocate_mw - 1e-3)
+        check("$test_name: all a[b] >= 0",
+              all(v >= -1e-6 for v in values(results[:allocated_load])))
+    end
+end
+
+# Return Set of bus IDs connected to any risky line (using p-flow key structure).
+function risky_buses_from_results(results::Dict)
+    risky_lines = Set(l for (d, l) in keys(results[:z]))
+    buses = Set{Int}()
+    for (d, t, (l, i, j)) in keys(results[:p])
+        if l in risky_lines
+            push!(buses, i); push!(buses, j)
+        end
+    end
+    return buses
+end
+
 # ── Hardening helpers ─────────────────────────────────────────────────────────
 
 function validate_hardening_results(results::Dict, config::Dict, test_name::String)

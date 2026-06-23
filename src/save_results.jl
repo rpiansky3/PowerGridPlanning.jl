@@ -204,6 +204,7 @@ function save_txt(results::Dict, filepath::String, opt_parameters::Dict)
         write_hardening_summary(io, results, opt_parameters)
         write_battery_summary(io, results, opt_parameters)
         write_solar_summary(io, results, opt_parameters)
+        write_allocation_summary(io, results, opt_parameters)
 
         # Write detailed variable data
         write_all_variables(io, results)
@@ -513,6 +514,43 @@ function write_solar_summary(io::IO, results::Dict, opt_parameters::Dict)
                 @printf(io, "    Bus %d: %.2f p.u. (%.2f MW)\n", bus_id, cap, cap * 100)
             end
             @printf(io, "    ... and %d more\n", length(installed) - 20)
+        end
+    end
+    println(io)
+
+    println(io, "=" ^ 80)
+end
+
+"""
+    write_allocation_summary(io, results, opt_parameters)
+
+Write load allocation summary to text file (if allocation is enabled).
+"""
+function write_allocation_summary(io::IO, results::Dict, opt_parameters::Dict)
+    if !haskey(results, :allocated_load)
+        return
+    end
+
+    println(io, "Load Allocation Summary:")
+    println(io, "-" ^ 40)
+    alloc = results[:allocated_load]
+    total_mw = results[:total_allocated_mw]
+    sited = sort([b for (b, v) in alloc if v >= 1e-4])
+
+    @printf(io, "  Buses Receiving Load:  %d\n", length(sited))
+    @printf(io, "  Total Allocated:       %.2f MW\n", total_mw)
+
+    println(io)
+
+    if !isempty(sited)
+        println(io, "  Allocated Load by Bus:")
+        display_buses = length(sited) <= 20 ? sited : sited[1:20]
+        for b in display_buses
+            v = alloc[b]
+            @printf(io, "    Bus %d: %.4f p.u. (%.2f MW)\n", b, v, v * 100)
+        end
+        if length(sited) > 20
+            @printf(io, "    ... and %d more\n", length(sited) - 20)
         end
     end
     println(io)
