@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/rpiansky3/PowerGridPlanning.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/rpiansky3/PowerGridPlanning.jl/actions/workflows/ci.yml)
 
-A Julia package for transmission grid planning on realistic power system networks. Provides DC and linearized AC formulations for co-optimizing line switching, line hardening, battery storage siting, and solar PV siting against load shedding, cost, and risk-exposure objectives. Applications include planning under severe-weather risk such as wildfires, with built-in support for USGS Fire Potential Index data.
+A Julia package for transmission grid planning on realistic power system networks. Provides DC and linearized AC formulations for co-optimizing line switching, line hardening, battery storage siting, and solar PV siting against load shedding, cost, and risk-exposure objectives, plus nonlinear AC verification/recovery runs for checking planned decisions. Applications include planning under severe-weather risk such as wildfires, with built-in support for USGS Fire Potential Index data.
 
 ## Table of Contents
 - [Overview](#overview)
@@ -30,6 +30,7 @@ This package provides a unified interface for transmission grid planning problem
 
 **Key Features:**
 - **Four formulations**: wildfire-aware switching (DCOTS, LACOTS) and pure power-flow baselines (DCOPF, LACOPF) sharing the same investment-planning interface
+- **Nonlinear AC verification**: Replay fixed planning decisions with AC power flow (`ACPF`) or run AC redispatch/recovery with load shedding (`ACOPF`)
 - **Multiple objective functions**: Load shedding minimization, risk-exposure minimization, generation cost minimization, and customizable tradeoffs
 - **Two switching methods**: Optimal MIP-based and fast thresholded heuristic
 - **Line hardening**: Optimize infrastructure investments (vegetation management, covered conductors, or undergrounding) to permanently reduce per-line risk exposure
@@ -43,7 +44,8 @@ This package provides a unified interface for transmission grid planning problem
 
 ### Prerequisites
 - Julia 1.10 or higher (LTS; 1.6+ is technically compatible but 1.10 is recommended)
-- Gurobi optimizer with valid license ([academic licenses available](https://www.gurobi.com/academia/academic-program-and-licenses/))
+- Gurobi optimizer with valid license for planning solves (`solve_ots`; [academic licenses available](https://www.gurobi.com/academia/academic-program-and-licenses/))
+- Ipopt is included as the default nonlinear solver for AC verification (`verify_ac`)
 
 ### Setup
 
@@ -83,6 +85,7 @@ PowerGridPlanning.jl/
 │   ├── add_constraints.jl          # Power flow and operational constraints
 │   ├── add_objective.jl            # Objective function formulations
 │   ├── base_OPS.jl                 # Core optimization solver
+│   ├── ac_verification.jl          # Nonlinear AC verification/recovery models
 │   ├── save_results.jl             # Output formatting and serialization
 │   ├── plotting.jl                 # plot_results() and all plot generation
 │   ├── plotting_helpers.jl         # Shared plotting utilities and color maps
@@ -265,6 +268,14 @@ Wildfire risk data is automatically loaded from the USGS Fire Potential Index (F
 - Allowed objectives: `"loadshed"` and `"cost"` only (`"wildfire"` and `"tradeoff"` require risk data)
 - LACOPF can warm-start from DCOPF (`:warm_start => "auto"`)
 
+#### Nonlinear AC Verification / Recovery
+- `verify_ac(ac_parameters, planning_results)` builds package-owned JuMP nonlinear AC models using polar AC power-flow equations
+- `:mode => "ACPF"` performs strict replay feasibility: fixed topology, fixed allocation, and saved dispatch where available
+- `:mode => "ACOPF"` performs AC redispatch/recovery with active/reactive load shedding, while keeping planning decisions fixed
+- Planning outputs are treated as fixed data: `:z` / `:switched_off_lines`, `:allocated_load`, solar capacity `:s`, and battery capacity `:x`
+- AC models do not create planning variables such as `z`, `y`, `x`, `s`, or `a`; they only create continuous operational AC variables
+- PowerModels is used for MATPOWER parsing and reference data; PowerModels' built-in AC solve routines are not used
+
 ### Solution Methods
 
 #### Optimal Method (default)
@@ -355,7 +366,7 @@ julia --project=. scripts/verify_reference_data.jl
 
 ## Tutorial
 
-A Jupyter notebook walkthrough is included at [`tutorial.ipynb`](tutorial.ipynb). It covers the core API end-to-end on the RTS network — basic solve, switching methods, hardening, battery and solar siting, the tradeoff curve, and plotting — using only the bundled `test_data/` so it runs out of the box after `Pkg.instantiate()` and a Gurobi license.
+A Jupyter notebook walkthrough is included at [`tutorial.ipynb`](tutorial.ipynb). It covers the core API end-to-end on the RTS network — basic solve, switching methods, hardening, battery and solar siting, nonlinear AC verification/recovery, the tradeoff curve, and plotting — using only the bundled `test_data/` so it runs out of the box after `Pkg.instantiate()` and a Gurobi license.
 
 ```bash
 julia --project=. -e 'using IJulia; notebook(dir=".")'
@@ -717,6 +728,60 @@ opt_parameters = Dict(
 :infrastructure_budget => nothing          # Budget in USD (default: $1B for non-cost objectives, unlimited for cost)
 ```
 
+### AC Verification API
+
+Use `verify_ac` after a planning solve when you want to check the fixed planning decisions in a nonlinear AC model. Baseline runs are also supported by omitting the planning results argument.
+
+```julia
+using PowerGridPlanning
+
+# Baseline AC redispatch with no wildfire switching or new infrastructure
+baseline_ac = verify_ac(Dict(
+    :network  => "RTS",
+    :mode     => "ACOPF",          # "ACPF" or "ACOPF"
+    :times    => [(2020, 6, 15)],
+    :T        => 1,
+    :data_dir => "test_data",
+))
+
+# Verify an existing DCOTS/LACOTS planning result under nonlinear AC equations
+planning_results = solve_ots(Dict(
+    :network          => "RTS",
+    :model            => "DCOTS",
+    :objective        => "loadshed",
+    :times            => [(2020, 6, 15)],
+    :data_dir         => "test_data",
+    :switching_method => "thresholded",
+    :threshold_pct    => 0.75,
+))
+
+ac_check = verify_ac(Dict(
+    :network  => "RTS",
+    :mode     => "ACOPF",
+    :times    => [(2020, 6, 15)],
+    :T        => 1,
+    :data_dir => "test_data",
+), planning_results)
+
+println("AC feasible all hours: $(ac_check[:feasible_all])")
+println("Failed hours: $(ac_check[:failed_hours])")
+println("AC recovery load shed: $(ac_check[:total_p_load_shed])")
+```
+
+Required `ac_parameters` keys:
+- `:network` - Network name
+- `:times` - Same time formats accepted by `solve_ots`
+- `:mode` - `"ACPF"` for strict replay feasibility or `"ACOPF"` for AC redispatch/recovery
+
+Optional AC parameters:
+- `:T => 24`
+- `:data_dir => "data"`
+- `:optimizer => Ipopt.Optimizer`
+- `:output_format => "dict"` (`"jld2"` and `"txt"` are also supported)
+- `:output_path => nothing` (required for `"jld2"` or `"txt"`)
+- `:load_shed_penalty => 1e6`
+- `:silent => true`
+
 ### Time Specification Formats
 
 ```julia
@@ -800,6 +865,26 @@ The `solve_ots()` function returns a dictionary with the following keys:
 - When hardening is enabled, `:active_risk` accounts for risk reduction from hardened lines
 - Battery capacity `:x[n]` is a continuous variable (p.u.); buses with capacity < 0.01 p.u. are considered uninstalled
 - Solar capacity `:s[n]` is a continuous variable (p.u.); buses with capacity < 0.01 p.u. are considered uninstalled
+
+### AC Verification Results
+
+`verify_ac()` returns a dictionary organized by `(day, hour)`:
+
+- `:status` - Dict mapping `(d, t)` to the nonlinear solver termination status
+- `:feasible` - Dict mapping `(d, t)` to a Boolean feasibility flag
+- `:feasible_all` - `true` if every checked hour solved to a feasible point
+- `:failed_hours` - Vector of `(d, t)` pairs that did not solve feasibly
+- `:hours` - Per-hour detailed results with bus voltages, generator dispatch, branch flows, load shed, and fixed branch statuses
+- `:total_p_load_shed` - Total active load shed across all checked hours
+- `:total_q_load_shed` - Total reactive load shed across all checked hours
+- `:total_load_shed` - Alias for total active load shed
+
+Each `results[:hours][(d,t)]` includes:
+- `:vm`, `:va` - Bus voltage magnitudes and angles
+- `:pg`, `:qg` - Generator active/reactive dispatch
+- `:p`, `:q` - Branch active/reactive flows in both directions
+- `:branch_status` - Fixed energized/off status used by the AC model
+- `:p_load_shed`, `:q_load_shed` - Present for `ACOPF` recovery runs
 
 ## Plotting
 
@@ -913,6 +998,34 @@ results = solve_ots(opt_parameters)
 # DCOPF results have no switching: results[:switched_off_lines][d] is empty
 # and risk_reduction_pct is 0. Investment options (battery, solar, hardening)
 # can still be enabled in the same Dict.
+```
+
+### Example 2c: Nonlinear AC Verification and Recovery
+
+```julia
+# First solve a planning model
+planning_results = solve_ots(Dict(
+    :network          => "RTS",
+    :model            => "DCOTS",
+    :objective        => "loadshed",
+    :times            => [(2020, 6, 15)],
+    :data_dir         => "test_data",
+    :switching_method => "thresholded",
+    :threshold_pct    => 0.75,
+))
+
+# Then replay those fixed planning decisions in a nonlinear AC recovery model
+ac_results = verify_ac(Dict(
+    :network  => "RTS",
+    :mode     => "ACOPF",        # redispatch + load shedding recovery
+    :times    => [(2020, 6, 15)],
+    :T        => 1,              # keep examples quick; default is 24
+    :data_dir => "test_data",
+), planning_results)
+
+println("AC feasible all hours: $(ac_results[:feasible_all])")
+println("AC failed hours: $(ac_results[:failed_hours])")
+println("AC active load shed: $(ac_results[:total_p_load_shed])")
 ```
 
 ### Example 3: Fast Thresholded Method
@@ -1377,6 +1490,7 @@ This package requires the following Julia packages:
 - **PowerModels.jl** - Power system network parsing and modeling
 - **JuMP.jl** - Mathematical optimization modeling
 - **Gurobi.jl** - MIP solver (requires commercial or academic license)
+- **Ipopt.jl** - Nonlinear solver used by default for AC verification/recovery
 - **CSV.jl** - CSV file I/O
 - **DataFrames.jl** - Tabular data manipulation
 - **JLD2.jl** - Binary data serialization
@@ -1422,7 +1536,7 @@ The full test suite exercises all model features using the June 2020 reference d
 julia --project=. test/runtests_full.jl
 ```
 
-This runs 18 test groups covering DCOTS, LACOTS, battery planning, solar planning, line hardening, plotting, and a multi-network smoke test across all 6 supported networks.
+This runs 22 test groups covering DCOTS, LACOTS, battery planning, solar planning, line hardening, plotting, AC verification/recovery, and a multi-network smoke test across all 6 supported networks.
 
 ## Citation
 

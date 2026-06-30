@@ -14,6 +14,7 @@ using Test
 using CSV
 using DataFrames
 using PowerGridPlanning
+using JuMP
 
 const PROJECT_ROOT = dirname(@__DIR__)
 const TEST_DATA    = joinpath(PROJECT_ROOT, "test_data")
@@ -22,6 +23,7 @@ const TEST_DATA    = joinpath(PROJECT_ROOT, "test_data")
 @testset "Package loads" begin
     @test PowerGridPlanning.solve_ots isa Function
     @test PowerGridPlanning.plot_results isa Function
+    @test PowerGridPlanning.verify_ac isa Function
 end
 
 # ── 2. Network files ──────────────────────────────────────────────────────────
@@ -168,6 +170,50 @@ end
         :times => [(2020, 6, 15)], :data_dir => "test_data",
         :allocate_mw => 100.0, :allocate_candidate_buses => "all",
     ))
+end
+
+# ── 9. AC verification pre-solver API and structure ──────────────────────────
+@testset "AC verification validation and structure" begin
+    @test_throws ErrorException verify_ac(Dict(
+        :network => "RTS", :mode => "BADMODE", :times => [(2020, 6, 15)]
+    ))
+
+    acpf = Dict(:network => "RTS", :mode => "ACPF",
+                :times => [(2020, 6, 15)], :T => 1, :data_dir => "test_data")
+    acopf = Dict(:network => "RTS", :mode => "ACOPF",
+                 :times => [(2020, 6, 15)], :T => 1, :data_dir => "test_data")
+    @test_nowarn begin
+        p = copy(acpf)
+        PowerGridPlanning.validate_ac_parameters!(p)
+        PowerGridPlanning.set_ac_defaults!(p)
+    end
+    @test_nowarn begin
+        p = copy(acopf)
+        PowerGridPlanning.validate_ac_parameters!(p)
+        PowerGridPlanning.set_ac_defaults!(p)
+    end
+
+    planning_results = Dict{Symbol,Any}(
+        :z => Dict((1, 1) => 0.0),
+        :y => Dict(1 => 1.0),
+        :x => Dict(101 => 0.5),
+        :s => Dict(102 => 0.25),
+        :allocated_load => Dict(103 => 0.1),
+    )
+    params = copy(acopf)
+    PowerGridPlanning.validate_ac_parameters!(params)
+    PowerGridPlanning.set_ac_defaults!(params)
+    pre = PowerGridPlanning._preprocess_ac_parameters(params, planning_results)
+    ctx = PowerGridPlanning._make_ac_hour_context(pre, params, planning_results, 1, 1)
+    model = Model()
+    PowerGridPlanning.build_acopf_recovery_model!(model, ctx)
+    variable_names = name.(all_variables(model))
+
+    @test !any(startswith.(variable_names, "z"))
+    @test !any(startswith.(variable_names, "y"))
+    @test !any(startswith.(variable_names, "x"))
+    @test !any(startswith.(variable_names, "s"))
+    @test !any(startswith.(variable_names, "a"))
 end
 
 include("test_population_assignment.jl")

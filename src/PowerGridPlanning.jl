@@ -2,6 +2,7 @@ module PowerGridPlanning
 
 using JuMP
 using Gurobi
+using Ipopt
 using PowerModels
 using CSV
 using DataFrames
@@ -25,13 +26,14 @@ include("add_variables.jl")
 include("add_constraints.jl")
 include("add_objective.jl")
 include("base_OPS.jl")
+include("ac_verification.jl")
 include("save_results.jl")
 include("plotting_helpers.jl")
 include("plotting.jl")
 
 # Export main interface
 export solve_ots, load_txt, get_network_solar_data, get_network_census, plot_results,
-       load_census_data
+       load_census_data, verify_ac
 
 """
     is_opf_only(model_type::AbstractString) -> Bool

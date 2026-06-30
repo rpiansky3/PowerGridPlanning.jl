@@ -404,6 +404,37 @@ check("Alloc LACOTS: status OPTIMAL or TIME_LIMIT",
 validate_allocation(r21, ALLOC_MW, "Alloc LACOTS")
 check("Alloc LACOTS: :vm present", haskey(r21, :vm))
 
+# ── Group 22: AC verification and recovery ───────────────────────────────────
+println("\n=== Group 22: AC verification and recovery ===")
+ac_base = Dict(
+    :network  => "RTS",
+    :times    => [TEST_DATE],
+    :T        => 1,
+    :data_dir => DATA_DIR,
+)
+
+acopf = verify_ac(merge(ac_base, Dict(:mode => "ACOPF")))
+check("ACOPF baseline: one-hour status present", haskey(acopf[:status], (1, 1)))
+check("ACOPF baseline: solved locally or globally",
+      acopf[:status][(1, 1)] in [MOI.OPTIMAL, MOI.LOCALLY_SOLVED, MOI.ALMOST_OPTIMAL, MOI.ALMOST_LOCALLY_SOLVED])
+
+acpf = verify_ac(merge(ac_base, Dict(:mode => "ACPF")))
+check("ACPF baseline: one-hour status present", haskey(acpf[:status], (1, 1)))
+check("ACPF baseline: failed_hours present", haskey(acpf, :failed_hours))
+
+ac_from_dc = verify_ac(merge(ac_base, Dict(:mode => "ACOPF")), r1)
+check("ACOPF accepts DC/LAC planning result", haskey(ac_from_dc[:hours], (1, 1)))
+
+forced_off = Dict{Symbol,Any}(:switched_off_lines => Dict(1 => [1]))
+ac_switched = verify_ac(merge(ac_base, Dict(:mode => "ACOPF")), forced_off)
+check("ACOPF fixed switching: line 1 is off",
+      get(ac_switched[:hours][(1, 1)][:branch_status], 1, 1) == 0)
+
+large_load = Dict{Symbol,Any}(:allocated_load => Dict(101 => 1e4))
+ac_recovery = verify_ac(merge(ac_base, Dict(:mode => "ACOPF")), large_load)
+check("ACOPF recovery reports load shed under forced stress",
+      ac_recovery[:total_p_load_shed] > 1.0)
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 println("\n" * "=" ^ 60)
 if all_pass
