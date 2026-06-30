@@ -67,7 +67,7 @@ Calculate big M value for voltage angle constraints.
 function calculate_big_m(ref::Dict, branch_names, bus_names)
     all_ang_maxs = Float64[]
     for (l, i, j) in branch_names
-        g1, b1 = PowerModels.calc_branch_y(ref[:branch][l])
+        g1, b1 = calc_branch_y(ref[:branch][l])
         p_temp = branch_rate_a(ref[:branch][l])
         ad_temp = abs(p_temp / b1)
         push!(all_ang_maxs, minimum([ref[:branch][l]["angmax"], ad_temp]))

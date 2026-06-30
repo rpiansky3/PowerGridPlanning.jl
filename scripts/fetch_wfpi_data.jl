@@ -12,10 +12,11 @@ Run from the project root directory.
 """
 
 using ArgParse, ArchGDAL, CSV, DataFrames, Dates, Distributed, Downloads
-using Extents, GeoInterface, GeoJSON, Hwloc, JSON, PowerModels
+using Extents, GeoInterface, GeoJSON, Hwloc, JSON, LinearAlgebra, PowerIO
 using Printf, ProgressMeter, Rasters, Statistics, ZipFile
 
-PowerModels.silence()
+include(joinpath(dirname(@__DIR__), "src", "network_utils.jl"))
+
 # macOS Sys.free_memory() returns only truly-free pages (not inactive), causing
 # Rasters to incorrectly reject operations that fit comfortably in actual available RAM.
 Rasters.checkmem!(false)
@@ -256,8 +257,8 @@ end
 """
     _generate_point_to_point_geometries(network) -> (Vector, Dict{Int,Int})
 
-Build LineString geometries for each branch in a PowerModels network.
-Returns `(geometries, id_map)` where `id_map[i]` is the PowerModels branch id
+Build LineString geometries for each branch in a network.
+Returns `(geometries, id_map)` where `id_map[i]` is the branch id
 corresponding to `geometries[i]`.
 """
 function _generate_point_to_point_geometries(network::String)
@@ -276,9 +277,8 @@ function _generate_point_to_point_geometries(network::String)
     end
 
     # Parse network
-    data = PowerModels.parse_file(net_path)
-    ref_full = PowerModels.build_ref(data)
-    ref = ref_full[:it][:pm][:nw][0]
+    data = PowerIO.to_powermodels(PowerIO.parse_file(net_path))
+    ref = build_ref(data)
 
     geometries = []
     id_map = Dict{Int,Int}()  # geometry index -> branch id

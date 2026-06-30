@@ -294,7 +294,7 @@ function calculate_generation_cost(ref::Dict, gen_var, gen_names, D::Int, T::Int
             for i in gen_names
                 if haskey(ref[:gen][i], "cost")
                     cost_data = ref[:gen][i]["cost"]
-                    # PowerModels uses polynomial cost: cost = c2*g^2 + c1*g + c0
+                    # Polynomial cost: cost = c2*g^2 + c1*g + c0
                     # For linear approximation, use c1 (marginal cost)
                     if length(cost_data) >= 2
                         # cost_data is typically [c2, c1, c0] or [c1, c0]

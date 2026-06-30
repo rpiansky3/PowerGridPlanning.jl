@@ -274,7 +274,7 @@ Wildfire risk data is automatically loaded from the USGS Fire Potential Index (F
 - `:mode => "ACOPF"` performs AC redispatch/recovery with active/reactive load shedding, while keeping planning decisions fixed
 - Planning outputs are treated as fixed data: `:z` / `:switched_off_lines`, `:allocated_load`, solar capacity `:s`, and battery capacity `:x`
 - AC models do not create planning variables such as `z`, `y`, `x`, `s`, or `a`; they only create continuous operational AC variables
-- PowerModels is used for MATPOWER parsing and reference data; PowerModels' built-in AC solve routines are not used
+- PowerIO is used for MATPOWER parsing; reference dictionaries and AC equations are package-owned
 
 ### Solution Methods
 
@@ -1487,7 +1487,7 @@ end
 
 This package requires the following Julia packages:
 
-- **PowerModels.jl** - Power system network parsing and modeling
+- **PowerIO.jl** - Power system network file parsing
 - **JuMP.jl** - Mathematical optimization modeling
 - **Gurobi.jl** - MIP solver (requires commercial or academic license)
 - **Ipopt.jl** - Nonlinear solver used by default for AC verification/recovery

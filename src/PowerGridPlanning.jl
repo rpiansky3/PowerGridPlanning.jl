@@ -3,7 +3,8 @@ module PowerGridPlanning
 using JuMP
 using Gurobi
 using Ipopt
-using PowerModels
+using LinearAlgebra
+using PowerIO
 using CSV
 using DataFrames
 using Dates
@@ -18,6 +19,7 @@ using DBFTables
 using GeoInterface
 
 # Include source files
+include("network_utils.jl")
 include("preprocessing.jl")
 include("solar_data.jl")
 include("census_data.jl")
@@ -301,12 +303,6 @@ function convert_percentage_threshold!(opt_parameters::Dict)
         println("Total risk: $(round(total_risk, digits=0))")
 
         opt_parameters[:threshold] = absolute_threshold
-    end
-end
-
-function __init__()
-    with_logger(NullLogger()) do
-        PowerModels.silence()
     end
 end
 

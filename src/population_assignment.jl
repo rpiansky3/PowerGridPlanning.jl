@@ -213,7 +213,7 @@ connected loads) is strictly positive.
 """
 function load_buses_with_load(network_name::String; data_dir::String="data")
     network_data = load_network(network_name, data_dir)
-    ref = PowerModels.build_ref(network_data)[:it][:pm][:nw][0]
+    ref = build_ref(network_data)
     out = Int[]
     for (b, load_ids) in ref[:bus_loads]
         pd_sum = reduce(+, ref[:load][j]["pd"] for j in load_ids; init=0.0)

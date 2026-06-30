@@ -288,8 +288,8 @@ function _add_ac_network_constraints!(model::JuMP.Model, ctx::Dict; recovery::Bo
             continue
         end
 
-        g, b = PowerModels.calc_branch_y(branch)
-        tr, ti = PowerModels.calc_branch_t(branch)
+        g, b = calc_branch_y(branch)
+        tr, ti = calc_branch_t(branch)
         g_fr = branch["g_fr"]
         b_fr = branch["b_fr"]
         g_to = branch["g_to"]
@@ -474,8 +474,8 @@ function _planning_capacity_dict(planning_results::Union{Dict,Nothing}, keys_to_
     return caps
 end
 
-function _lookup_dispatch(planning_results::Union{Dict,Nothing}, keys_to_try, d::Int, t::Int, idx::Int, default::Float64)
-    planning_results === nothing && return default
+function _lookup_dispatch(planning_results::Union{Dict,Nothing}, keys_to_try, d::Int, t::Int, idx::Int, default::Real)
+    planning_results === nothing && return Float64(default)
     for key in keys_to_try
         haskey(planning_results, key) || continue
         val = _dict_get_any(planning_results[key], ((d, t, idx), (d, t, string(idx)), string((d, t, idx))))
@@ -488,7 +488,7 @@ function _lookup_dispatch(planning_results::Union{Dict,Nothing}, keys_to_try, d:
             end
         end
     end
-    return default
+    return Float64(default)
 end
 
 function _dict_get_any(dct, keys_to_try)

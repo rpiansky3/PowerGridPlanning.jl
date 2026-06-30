@@ -6,10 +6,12 @@ using JSON
 using CSV
 using DataFrames
 using Dates
-using PowerModels
+using LinearAlgebra
+using PowerIO
 using JLD2
 
 # Include the files
+include("../src/network_utils.jl")
 include("../src/preprocessing.jl")
 include("../src/solar_data.jl")
 

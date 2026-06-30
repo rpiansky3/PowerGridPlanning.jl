@@ -12,7 +12,7 @@ This also sets rate_a for branches that have none in the network file.
 """
 function tighten_branch_limits!(ref::Dict)
     for (l, branch) in ref[:branch]
-        _, b = PowerModels.calc_branch_y(branch)
+        _, b = calc_branch_y(branch)
         ang_bound = max(abs(get(branch, "angmin", -π)), abs(get(branch, "angmax", π)))
         btheta_bound = abs(b) * ang_bound
         current_rate_a = get(branch, "rate_a", Inf)
@@ -55,7 +55,7 @@ function preprocess(opt_parameters::Dict)
     is_cats = occursin("California", network_name) || occursin("CATS", network_name)
 
     # Build reference dictionary
-    ref = PowerModels.build_ref(network_data)[:it][:pm][:nw][0]
+    ref = build_ref(network_data)
     tighten_branch_limits!(ref)
 
     # Prepare data structure
@@ -93,7 +93,7 @@ function preprocess(opt_parameters::Dict)
                 update_cats_network!(network_copy, hour_of_year, cats_data, preprocessed[:load_mapping])
 
                 # Build reference for this hour
-                preprocessed[:hourly_refs][d][t] = PowerModels.build_ref(network_copy)[:it][:pm][:nw][0]
+                preprocessed[:hourly_refs][d][t] = build_ref(network_copy)
                 tighten_branch_limits!(preprocessed[:hourly_refs][d][t])
             end
         end
@@ -369,7 +369,8 @@ function load_network(network_name::String, data_dir::String="data")
         error("Network file not found: $network_name\nAvailable simplified names: $(join(available_simple, ", "))\nAvailable files: $(join(available, ", "))")
     end
 
-    return PowerModels.parse_file(network_file)
+    network = PowerIO.parse_file(network_file)
+    return PowerIO.to_powermodels(network)
 end
 
 """
@@ -1329,7 +1330,7 @@ end
 Calculate transmission line lengths using haversine formula.
 
 # Arguments
-- `ref`: PowerModels network reference dictionary
+- `ref`: network reference dictionary
 - `bus_data`: DataFrame with columns [:Bus_ID, :lat, :lng]
 
 # Returns
@@ -1585,7 +1586,7 @@ Determine which buses are candidates for battery installation.
 
 # Arguments
 - `opt_parameters`: Dictionary containing optimization parameters
-- `ref`: PowerModels network reference dictionary
+- `ref`: network reference dictionary
 
 # Returns
 - Vector of bus IDs that can have batteries (sorted)

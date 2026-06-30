@@ -75,7 +75,7 @@ function add_dcots_constraints!(model::JuMP.Model, preprocessed::Dict, opt_param
             va_to = va[d, t, j]
 
             # Compute branch parameters
-            g1, b1 = PowerModels.calc_branch_y(ref[:branch][l])
+            g1, b1 = calc_branch_y(ref[:branch][l])
 
             if l in risky_lines[d]
                 # Switchable line on this day: relax constraints with Big-M
@@ -438,7 +438,7 @@ function add_lacots_constraints!(model::JuMP.Model, preprocessed::Dict, opt_para
             vm_to = vm[d, t, j]
 
             # Compute branch parameters
-            g1, b1 = PowerModels.calc_branch_y(ref[:branch][l])
+            g1, b1 = calc_branch_y(ref[:branch][l])
 
             if l in risky_lines[d]
                 # Switchable line on this day: relax constraints with Big-M
