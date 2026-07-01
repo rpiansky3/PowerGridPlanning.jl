@@ -216,4 +216,51 @@ end
     @test !any(startswith.(variable_names, "a"))
 end
 
+# ── 10. Result saving ────────────────────────────────────────────────────────
+@testset "OTS result saving includes islanding metrics" begin
+    load_shedding = JuMP.Containers.DenseAxisArray(zeros(1, 1, 3), 1:1, 1:1, [1, 2, 3])
+
+    results = Dict{Symbol,Any}(
+        :status => "OPTIMAL",
+        :solve_time => 0.1,
+        :objective_value => 0.0,
+        :model_type => "DCOTS",
+        :D => 1,
+        :T => 1,
+        :times => [(2020, 6, 15)],
+        :network => "RTS",
+        :switching_method => "thresholded",
+        :switched_off_lines => Dict(1 => [2]),
+        :islanded_buses => Dict(1 => [3]),
+        :islanded_bus_count => Dict(1 => 1),
+        :total_islanded_buses => 1,
+        :total_load_shed => 0.0,
+        :load_shedding => load_shedding,
+        :total_risk => 10.0,
+        :active_risk => 5.0,
+        :removed_risk => 5.0,
+        :risk_reduction_pct => 50.0,
+        :z => Dict((1, 2) => 0.0),
+    )
+    opt_parameters = Dict{Symbol,Any}(
+        :network => "RTS",
+        :objective => "loadshed",
+        :time_limit => 60.0,
+        :mip_gap => 0.01,
+    )
+
+    mktemp() do path, io
+        close(io)
+        PowerGridPlanning.save_txt(results, path, opt_parameters)
+        txt = read(path, String)
+
+        @test occursin("Islanded Buses:   1", txt)
+        @test occursin("Islanded buses: 1", txt)
+        @test occursin("[islanded_bus_count - Islanded Bus Count by Day]", txt)
+        @test occursin("1 => 1", txt)
+        @test occursin("[islanded_buses - Islanded Buses by Day]", txt)
+        @test occursin("1 => [3]", txt)
+    end
+end
+
 include("test_population_assignment.jl")

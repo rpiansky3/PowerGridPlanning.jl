@@ -489,11 +489,33 @@ function extract_results(model::JuMP.Model, preprocessed::Dict, opt_parameters::
     results[:switched_off_lines] = switched_off
     results[:switching_method] = switching_method
 
+    # Islanding metrics for transmission-switching models.
+    if !is_opf_only(model_type)
+        ref = preprocessed[:base_ref]
+        branch_status = Dict{Int,Int}(l => 1 for l in keys(ref[:branch]))
+
+        islanded_buses = Dict{Int,Vector{Int}}()
+        islanded_bus_count = Dict{Int,Int}()
+        for d in 1:D
+            for l in keys(ref[:branch])
+                branch_status[l] = l in risky_lines[d] && results[:z][(d, l)] < 0.5 ? 0 : 1
+            end
+
+            islanded_buses[d] = islanded_buses_for_branch_status(ref, branch_status)
+            islanded_bus_count[d] = length(islanded_buses[d])
+        end
+
+        results[:islanded_buses] = islanded_buses
+        results[:islanded_bus_count] = islanded_bus_count
+        results[:total_islanded_buses] = sum(values(islanded_bus_count); init=0)
+    end
+
     println("Optimization complete!")
     println("Status: $(results[:status])")
     println("Objective value: $(results[:objective_value])")
     println("Total load shed: $(results[:total_load_shed])")
     println("Risk reduction: $(round(results[:risk_reduction_pct], digits=2))%")
+    haskey(results, :total_islanded_buses) && println("Total islanded buses: $(results[:total_islanded_buses])")
 
     return results
 end

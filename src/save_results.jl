@@ -306,6 +306,9 @@ function write_summary(io::IO, results::Dict)
     @printf(io, "  Status:           %s\n", results[:status])
     @printf(io, "  Solve Time:       %.2f seconds\n", results[:solve_time])
     @printf(io, "  Objective Value:  %.6f\n", results[:objective_value])
+    if haskey(results, :total_islanded_buses)
+        @printf(io, "  Islanded Buses:   %d\n", results[:total_islanded_buses])
+    end
     println(io)
 end
 
@@ -331,6 +334,19 @@ function write_switching_decisions(io::IO, results::Dict)
             end
         else
             @printf(io, "  Day %d: No lines switched off\n", d)
+        end
+
+        if haskey(results, :islanded_bus_count)
+            islanded_count = results[:islanded_bus_count][d]
+            islanded = results[:islanded_buses][d]
+            @printf(io, "    Islanded buses: %d\n", islanded_count)
+            if islanded_count > 0
+                if islanded_count <= 10
+                    @printf(io, "    Buses: %s\n", join(islanded, ", "))
+                else
+                    @printf(io, "    Buses: %s, ...\n", join(islanded[1:10], ", "))
+                end
+            end
         end
     end
     println(io)
@@ -625,6 +641,20 @@ function write_all_variables(io::IO, results::Dict)
         println(io, "[z - Line Switching Decisions]")
         println(io, "# Binary variables: 1 = energized, 0 = de-energized")
         write_variable_data(io, results[:z], "z")
+        println(io)
+    end
+
+    if haskey(results, :islanded_bus_count)
+        println(io, "[islanded_bus_count - Islanded Bus Count by Day]")
+        println(io, "# Count of buses disconnected from all reference buses after switching")
+        write_variable_data(io, results[:islanded_bus_count], "islanded_bus_count")
+        println(io)
+    end
+
+    if haskey(results, :islanded_buses)
+        println(io, "[islanded_buses - Islanded Buses by Day]")
+        println(io, "# Bus IDs disconnected from all reference buses after switching")
+        write_variable_data(io, results[:islanded_buses], "islanded_buses")
         println(io)
     end
 
