@@ -14,6 +14,7 @@ using Test
 using CSV
 using DataFrames
 using PowerGridPlanning
+using PowerIO
 using JuMP
 
 const PROJECT_ROOT = dirname(@__DIR__)
@@ -40,6 +41,23 @@ end
         path = joinpath(TEST_DATA, "networks", f)
         @test isfile(path)
     end
+end
+
+# ── 2a. PowerIO reference helpers ────────────────────────────────────────────
+@testset "PowerIO reference helpers" begin
+    path = joinpath(TEST_DATA, "networks", "pglib_opf_case240_pserc.m")
+    network_data = PowerIO.to_powermodels(PowerIO.parse_file(path))
+
+    @test PowerGridPlanning.build_ref(network_data) == PowerIO.build_ref(network_data)
+
+    branch_data = Dict{String,Any}(
+        "branch" => Dict{String,Any}(
+            "1" => Dict{String,Any}("angmin" => -pi / 2, "angmax" => pi / 2),
+            "2" => Dict{String,Any}("angmin" => 0.0, "angmax" => 0.0),
+        ),
+    )
+    @test PowerGridPlanning.correct_voltage_angle_differences!(deepcopy(branch_data)) ==
+          PowerIO.correct_voltage_angle_differences!(deepcopy(branch_data))
 end
 
 # ── 3. WFPI risk data ─────────────────────────────────────────────────────────
