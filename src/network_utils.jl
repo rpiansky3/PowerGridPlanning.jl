@@ -3,49 +3,6 @@ Utilities for working with PowerIO network dictionaries.
 """
 
 """
-    calc_branch_t(branch::Dict) -> (Real, Real)
-
-Calculate transformer tap components from tap ratio and phase shift.
-"""
-function calc_branch_t(branch::Dict{String,<:Any})
-    tap_ratio = branch["tap"]
-    angle_shift = branch["shift"]
-
-    return tap_ratio * cos(angle_shift), tap_ratio * sin(angle_shift)
-end
-
-"""
-    calc_branch_y(branch::Dict) -> (Real, Real)
-
-Calculate branch conductance and susceptance from branch impedance.
-"""
-function calc_branch_y(branch::Dict{String,<:Any})
-    y = LinearAlgebra.pinv(branch["br_r"] + im * branch["br_x"])
-    return real(y), imag(y)
-end
-
-"""
-    correct_voltage_angle_differences!(network_data::Dict)
-
-Match the legacy MATPOWER data correction for unsupported angle bounds.
-"""
-function correct_voltage_angle_differences!(network_data::Dict{String,<:Any}; default_pad=1.0472)
-    return PowerIO.correct_voltage_angle_differences!(
-        network_data;
-        default_pad=default_pad,
-    )
-end
-
-"""
-    build_ref(network_data::Dict) -> Dict
-
-Build the subset of the network reference dictionary used by this package.
-"""
-function build_ref(network_data::Dict{String,<:Any})
-    return PowerIO.build_ref(network_data)
-end
-
-"""
     islanded_buses_for_branch_status(ref::Dict, branch_status::Dict) -> Vector{Int}
 
 Return buses disconnected from every reference bus under the supplied branch

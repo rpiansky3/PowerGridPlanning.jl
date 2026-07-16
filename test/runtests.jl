@@ -44,11 +44,23 @@ end
 end
 
 # ── 2a. PowerIO reference helpers ────────────────────────────────────────────
+# PowerGridPlanning calls these qualified (PowerIO.build_ref etc.) — confirm the
+# installed PowerIO provides them and they behave sanely on a real network.
 @testset "PowerIO reference helpers" begin
     path = joinpath(TEST_DATA, "networks", "pglib_opf_case240_pserc.m")
     network_data = PowerIO.to_powermodels(PowerIO.parse_file(path))
 
-    @test PowerGridPlanning.build_ref(network_data) == PowerIO.build_ref(network_data)
+    ref = PowerIO.build_ref(network_data)
+    @test ref isa Dict{Symbol,<:Any}
+    @test haskey(ref, :bus) && !isempty(ref[:bus])
+    @test haskey(ref, :branch) && !isempty(ref[:branch])
+    @test haskey(ref, :ref_buses)
+
+    branch = first(values(ref[:branch]))
+    g, b = PowerIO.calc_branch_y(branch)
+    @test g isa Real && b isa Real
+    tr, ti = PowerIO.calc_branch_t(branch)
+    @test tr isa Real && ti isa Real
 
     branch_data = Dict{String,Any}(
         "branch" => Dict{String,Any}(
@@ -56,8 +68,8 @@ end
             "2" => Dict{String,Any}("angmin" => 0.0, "angmax" => 0.0),
         ),
     )
-    @test PowerGridPlanning.correct_voltage_angle_differences!(deepcopy(branch_data)) ==
-          PowerIO.correct_voltage_angle_differences!(deepcopy(branch_data))
+    corrected = PowerIO.correct_voltage_angle_differences!(deepcopy(branch_data))
+    @test corrected isa Dict
 end
 
 # ── 3. WFPI risk data ─────────────────────────────────────────────────────────

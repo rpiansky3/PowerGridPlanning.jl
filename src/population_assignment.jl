@@ -67,7 +67,7 @@ function tract_centroid(ring)
 end
 
 """
-    load_network_tracts_near_buses(network_name; radius_m=25_000.0) -> Vector{NamedTuple}
+    load_network_tracts_near_buses(network_name; radius_m=25_000.0, data_dir="data") -> Vector{NamedTuple}
 
 Load census tracts in the network's state(s) whose centroid is within
 `radius_m` of ANY bus in the network. Uses a lat/lon prefilter derived from
@@ -77,10 +77,11 @@ Returns NamedTuples with `geoid, state_fips, county_fips, tract_fips,
 centroid_lat, centroid_lng`. Warns and returns an empty vector if the
 shapefile is missing.
 """
-function load_network_tracts_near_buses(network_name::String; radius_m::Float64=25_000.0)
+function load_network_tracts_near_buses(network_name::String; radius_m::Float64=25_000.0,
+                                        data_dir::String="data")
     base_path = something(pkgdir(PowerGridPlanning), dirname(dirname(@__FILE__)))
-    shp_path = joinpath(base_path, "data", "US_Shapefiles", "cb_2023_us_tract_500k.shp")
-    dbf_path = joinpath(base_path, "data", "US_Shapefiles", "cb_2023_us_tract_500k.dbf")
+    shp_path = joinpath(base_path, data_dir, "US_Shapefiles", "cb_2023_us_tract_500k.shp")
+    dbf_path = joinpath(base_path, data_dir, "US_Shapefiles", "cb_2023_us_tract_500k.dbf")
 
     if !isfile(shp_path)
         zip_path = joinpath(dirname(shp_path), "cb_2023_us_tract_500k.zip")
@@ -94,7 +95,7 @@ function load_network_tracts_near_buses(network_name::String; radius_m::Float64=
     delete!(target_fips, "")
     isempty(target_fips) && return NamedTuple[]
 
-    bus_coords = load_bus_coordinates(network_name)
+    bus_coords = load_bus_coordinates(network_name, data_dir)
     blat = Float64[]; blon = Float64[]
     for row in eachrow(bus_coords)
         (ismissing(row.lat) || ismissing(row.lng)) && continue
@@ -213,7 +214,7 @@ connected loads) is strictly positive.
 """
 function load_buses_with_load(network_name::String; data_dir::String="data")
     network_data = load_network(network_name, data_dir)
-    ref = build_ref(network_data)
+    ref = PowerIO.build_ref(network_data)
     out = Int[]
     for (b, load_ids) in ref[:bus_loads]
         pd_sum = reduce(+, ref[:load][j]["pd"] for j in load_ids; init=0.0)
@@ -452,7 +453,7 @@ function get_network_census(network_name::String;
     mkpath(dirname(output_path))
 
     println("Loading tracts within $(radius_m/1000) km of any $network_name bus...")
-    tracts = load_network_tracts_near_buses(network_name; radius_m=radius_m)
+    tracts = load_network_tracts_near_buses(network_name; radius_m=radius_m, data_dir=data_dir)
     println("  $(length(tracts)) tracts in region")
     if isempty(tracts)
         @warn "No tracts found — aborting"
@@ -463,7 +464,7 @@ function get_network_census(network_name::String;
     tract_rows = fetch_tract_demographics(tracts, acs_year, api_key)
 
     load_bus_ids = Set(load_buses_with_load(network_name; data_dir=data_dir))
-    bus_coords = load_bus_coordinates(network_name)
+    bus_coords = load_bus_coordinates(network_name, data_dir)
     buses = NamedTuple[]
     for row in eachrow(bus_coords)
         ismissing(row.Bus_ID) && continue
