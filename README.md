@@ -1526,7 +1526,13 @@ using Pkg
 Pkg.test("PowerGridPlanning")
 ```
 
-These tests cover package loading, reference data file existence, CSV column structure, and parameter validation. They do not invoke the Gurobi solver.
+These tests cover package loading, reference data file existence, CSV column structure, parameter validation, and census aggregation invariants (checked offline against the fixture in `test_data/census_data/`). They do not invoke the Gurobi solver or make any network requests.
+
+To additionally run the live Census API end-to-end test (opt-in; requires network access and ideally a `CENSUS_API_KEY`):
+
+```bash
+PGP_LIVE_TESTS=1 julia --project=. test/runtests.jl
+```
 
 ### Full test suite (requires Gurobi license)
 

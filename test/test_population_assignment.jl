@@ -182,10 +182,49 @@ end
     @test byb[2].median_income ≈ 30_000.0
 end
 
-# ── Integration test (gated on shapefile presence) ───────────────────────────
-@testset "RTS integration (requires shapefile)" begin
+# ── Fixture invariants (offline — no HTTP) ───────────────────────────────────
+# Checks the checked-in per-bus census output against the same invariants the
+# live pipeline must satisfy, so CI exercises them without touching the ACS API.
+@testset "RTS census fixture invariants" begin
+    fixture = joinpath(PROJECT_ROOT, "test_data", "census_data", "RTS_census_2022.csv")
+    @test isfile(fixture)
+    df = CSV.read(fixture, DataFrame; types=Dict(:Bus_ID=>Int))
+    @test nrow(df) > 0
+
+    lb = PowerGridPlanning.load_buses_with_load("RTS"; data_dir="test_data")
+    @test !isempty(lb)
+    assigned = Set(df.Bus_ID)
+    # Every load bus appears exactly once
+    @test all(b in assigned for b in lb)
+    @test length(unique(df.Bus_ID)) == nrow(df)
+
+    # All absolute counts are non-negative
+    for col in (:total_pop, :num_households, :num_white, :num_black,
+                :num_native, :num_asian, :num_hispanic,
+                :num_below_poverty, :num_above_poverty,
+                :num_low_income, :num_middle_income, :num_high_income)
+        @test all(df[!, col] .>= -1e-9)
+    end
+
+    # Race/poverty/income subgroups never exceed the relevant universe
+    # (1e-4 tolerance: CSV values are rounded to 6 decimals before summing)
+    @test all(df.num_white .<= df.total_pop .+ 1e-4)
+    @test all(df.num_below_poverty .+ df.num_above_poverty .<= df.total_pop .+ 1e-4)
+    @test all(df.num_low_income .+ df.num_middle_income .+ df.num_high_income
+              .<= df.num_households .+ 1e-4)
+
+    # Median income is population-weighted from real ACS values — sane range
+    @test all(skipmissing(df.median_income) .> 0)
+end
+
+# ── Live end-to-end test (opt-in: PGP_LIVE_TESTS=1) ──────────────────────────
+# Hits the real Census ACS API. Skipped by default so CI is deterministic and
+# doesn't depend on api.census.gov availability or rate limits.
+@testset "RTS live integration (PGP_LIVE_TESTS=1)" begin
     shp = joinpath(PROJECT_ROOT, "test_data", "US_Shapefiles", "cb_2023_us_tract_500k.shp")
-    if !isfile(shp)
+    if get(ENV, "PGP_LIVE_TESTS", "") != "1"
+        @info "Skipping live Census API test — set PGP_LIVE_TESTS=1 to enable"
+    elseif !isfile(shp)
         @info "Skipping RTS integration test — shapefile not available at $shp"
     else
         tmp = mktempdir()
@@ -219,7 +258,8 @@ end
                 @test all(df[!, col] .>= -1e-9)
             end
         else
-            @info "Integration output not produced (Census API unavailable?). Skipping invariants."
+            @error "Live integration produced no output — Census API unreachable or returned no data"
+            @test false
         end
     end
 end
