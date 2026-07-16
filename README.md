@@ -49,11 +49,16 @@ This package provides a unified interface for transmission grid planning problem
 
 ### Setup
 
-**Option A — install directly via Julia Pkg (no clone needed):**
+**Option A — install from the Julia General registry (recommended):**
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/rpiansky3/PowerGridPlanning.jl")
+Pkg.add("PowerGridPlanning")
 using PowerGridPlanning
+```
+
+To track the latest development version on `main` instead of the registered release:
+```julia
+Pkg.add(url="https://github.com/rpiansky3/PowerGridPlanning.jl")
 ```
 
 **Option B — clone and develop locally:**
@@ -1549,10 +1554,11 @@ This runs 22 test groups covering DCOTS, LACOTS, battery planning, solar plannin
 If you use this package in your research, please cite:
 
 ```bibtex
-@software{PowerGridPlanning_jl_2025,
+@software{PowerGridPlanning_jl,
   author = {Piansky, Ryan},
-  title = {PowerGridPlanning.jl: Wildfire-Informed Transmission Switching Optimization},
-  year = {2025},
+  title = {PowerGridPlanning.jl: Transmission Grid Planning with Co-Optimized Switching, Hardening, and Storage},
+  year = {2026},
+  version = {0.2.0},
   url = {https://github.com/rpiansky3/PowerGridPlanning.jl}
 }
 ```

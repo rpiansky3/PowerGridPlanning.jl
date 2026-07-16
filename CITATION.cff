@@ -6,8 +6,8 @@ authors:
   - family-names: Piansky
     given-names: Ryan
     alias: rpiansky3
-version: 0.1.0
-date-released: 2025-01-01
+version: 0.2.0
+date-released: 2026-07-16
 url: "https://github.com/rpiansky3/PowerGridPlanning.jl"
 repository-code: "https://github.com/rpiansky3/PowerGridPlanning.jl"
 license: MIT

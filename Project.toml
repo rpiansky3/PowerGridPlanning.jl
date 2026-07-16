@@ -1,6 +1,6 @@
 name = "PowerGridPlanning"
 uuid = "a7220958-9516-4853-85d5-0fc586ce8da1"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Ryan Piansky <@rpiansky3>"]
 
 [deps]
