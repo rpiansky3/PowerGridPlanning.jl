@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Examples · PowerGridPlanning.jl</title><meta name="title" content="Examples · PowerGridPlanning.jl"/><meta property="og:title" content="Examples · PowerGridPlanning.jl"/><meta property="twitter:title" content="Examples · PowerGridPlanning.jl"/><meta name="description" content="Documentation for PowerGridPlanning.jl."/><meta property="og:description" content="Documentation for PowerGridPlanning.jl."/><meta property="twitter:description" content="Documentation for PowerGridPlanning.jl."/><meta property="og:url" content="https://rpiansky3.github.io/PowerGridPlanning.jl/guide/examples/"/><meta property="twitter:url" content="https://rpiansky3.github.io/PowerGridPlanning.jl/guide/examples/"/><link rel="canonical" href="https://rpiansky3.github.io/PowerGridPlanning.jl/guide/examples/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">PowerGridPlanning.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Guide</span><ul><li><a class="tocitem" href="../models/">Models and Methods</a></li><li><a class="tocitem" href="../data/">Data</a></li><li><a class="tocitem" href="../usage/">Usage Guide</a></li><li><a class="tocitem" href="../cli/">Command-Line Interface</a></li><li class="is-active"><a class="tocitem" href>Examples</a><ul class="internal"><li><a class="tocitem" href="#Example-1:-Basic-DCOTS-with-Tradeoff-Objective"><span>Example 1: Basic DCOTS with Tradeoff Objective</span></a></li><li><a class="tocitem" href="#Example-2:-LACOTS-with-DCOTS-Warm-Start"><span>Example 2: LACOTS with DCOTS Warm Start</span></a></li><li><a class="tocitem" href="#Example-2b:-Pure-DCOPF-Baseline-(no-wildfire-switching)"><span>Example 2b: Pure DCOPF Baseline (no wildfire switching)</span></a></li><li><a class="tocitem" href="#Example-2c:-Nonlinear-AC-Verification-and-Recovery"><span>Example 2c: Nonlinear AC Verification and Recovery</span></a></li><li><a class="tocitem" href="#Example-3:-Fast-Thresholded-Method"><span>Example 3: Fast Thresholded Method</span></a></li><li><a class="tocitem" href="#Example-4:-Multi-Period-Optimization"><span>Example 4: Multi-Period Optimization</span></a></li><li><a class="tocitem" href="#Example-5:-CATS-Network-with-Custom-Risk-Metric"><span>Example 5: CATS Network with Custom Risk Metric</span></a></li><li><a class="tocitem" href="#Example-6:-Cost-Minimization"><span>Example 6: Cost Minimization</span></a></li><li><a class="tocitem" href="#Example-7:-Save-Results-to-File"><span>Example 7: Save Results to File</span></a></li><li><a class="tocitem" href="#Example-8:-Export-Model-and-Solver-Logs"><span>Example 8: Export Model and Solver Logs</span></a></li><li><a class="tocitem" href="#Example-9:-Comparison-Study"><span>Example 9: Comparison Study</span></a></li><li><a class="tocitem" href="#Example-10:-Line-Hardening-with-Loadshed-Objective"><span>Example 10: Line Hardening with Loadshed Objective</span></a></li><li><a class="tocitem" href="#Example-11:-Cost-Minimization-with-Hardening"><span>Example 11: Cost Minimization with Hardening</span></a></li><li><a class="tocitem" href="#Example-12:-Thresholded-Switching-with-Optimal-Hardening"><span>Example 12: Thresholded Switching with Optimal Hardening</span></a></li><li><a class="tocitem" href="#Example-13:-Battery-Installation-on-CATS-Network"><span>Example 13: Battery Installation on CATS Network</span></a></li><li><a class="tocitem" href="#Example-14:-Custom-Wildfire-Risk-Data"><span>Example 14: Custom Wildfire Risk Data</span></a></li><li><a class="tocitem" href="#Example-15:-Combined-Infrastructure-Optimization"><span>Example 15: Combined Infrastructure Optimization</span></a></li><li><a class="tocitem" href="#Example-16:-Auto-Plotting-via-opt_parameters"><span>Example 16: Auto-Plotting via opt_parameters</span></a></li><li><a class="tocitem" href="#Example-17:-Solar-PV-Installation-with-Reactive-Power-Support"><span>Example 17: Solar PV Installation with Reactive Power Support</span></a></li></ul></li></ul></li><li><span class="tocitem">Reference</span><ul><li><a class="tocitem" href="../../reference/results/">Results Dictionary</a></li><li><a class="tocitem" href="../../reference/plotting/">Plotting</a></li><li><a class="tocitem" href="../../reference/api/">API Reference</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Guide</a></li><li class="is-active"><a href>Examples</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Examples</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/rpiansky3/PowerGridPlanning.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/rpiansky3/PowerGridPlanning.jl/blob/main/docs/src/guide/examples.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Examples"><a class="docs-heading-anchor" href="#Examples">Examples</a><a id="Examples-1"></a><a class="docs-heading-anchor-permalink" href="#Examples" title="Permalink"></a></h1><h2 id="Example-1:-Basic-DCOTS-with-Tradeoff-Objective"><a class="docs-heading-anchor" href="#Example-1:-Basic-DCOTS-with-Tradeoff-Objective">Example 1: Basic DCOTS with Tradeoff Objective</a><a id="Example-1:-Basic-DCOTS-with-Tradeoff-Objective-1"></a><a class="docs-heading-anchor-permalink" href="#Example-1:-Basic-DCOTS-with-Tradeoff-Objective" title="Permalink"></a></h2><pre><code class="language-julia hljs">using PowerGridPlanning
+
+opt_parameters = Dict(
+    :network =&gt; &quot;RTS&quot;,
+    :model =&gt; &quot;DCOTS&quot;,
+    :objective =&gt; &quot;tradeoff&quot;,
+    :times =&gt; [(2020, 6, 15)],
+    :data_dir =&gt; &quot;test_data&quot;,
+    :tradeoff_weight =&gt; 0.7,  # Prioritize wildfire risk reduction
+    :time_limit =&gt; 300.0
+)
+
+results = solve_ots(opt_parameters)
+
+# Access results
+println(&quot;Optimized in $(results[:solve_time]) seconds&quot;)
+println(&quot;$(results[:risk_reduction_pct])% of wildfire risk removed&quot;)
+println(&quot;$(results[:total_load_shed]) MW of load shed&quot;)</code></pre><h2 id="Example-2:-LACOTS-with-DCOTS-Warm-Start"><a class="docs-heading-anchor" href="#Example-2:-LACOTS-with-DCOTS-Warm-Start">Example 2: LACOTS with DCOTS Warm Start</a><a id="Example-2:-LACOTS-with-DCOTS-Warm-Start-1"></a><a class="docs-heading-anchor-permalink" href="#Example-2:-LACOTS-with-DCOTS-Warm-Start" title="Permalink"></a></h2><pre><code class="language-julia hljs"># Automatically runs DCOTS first, then uses solution to warm-start LACOTS
+opt_parameters = Dict(
+    :network =&gt; &quot;RTS&quot;,
+    :model =&gt; &quot;LACOTS&quot;,
+    :objective =&gt; &quot;loadshed&quot;,
+    :times =&gt; [(2020, 6, 15)],
+    :data_dir =&gt; &quot;test_data&quot;,
+    :warm_start =&gt; &quot;auto&quot;
+)
+
+results = solve_ots(opt_parameters)</code></pre><h2 id="Example-2b:-Pure-DCOPF-Baseline-(no-wildfire-switching)"><a class="docs-heading-anchor" href="#Example-2b:-Pure-DCOPF-Baseline-(no-wildfire-switching)">Example 2b: Pure DCOPF Baseline (no wildfire switching)</a><a id="Example-2b:-Pure-DCOPF-Baseline-(no-wildfire-switching)-1"></a><a class="docs-heading-anchor-permalink" href="#Example-2b:-Pure-DCOPF-Baseline-(no-wildfire-switching)" title="Permalink"></a></h2><pre><code class="language-julia hljs"># Use DCOPF when you want a true no-action baseline — lines never get
+# de-energized for risk mitigation, even under a &quot;cost&quot; or &quot;loadshed&quot; objective.
+opt_parameters = Dict(
+    :network   =&gt; &quot;RTS&quot;,
+    :model     =&gt; &quot;DCOPF&quot;,          # pure DC OPF; no z switching variables
+    :objective =&gt; &quot;cost&quot;,           # generation cost + VOLL × load shed
+    :times     =&gt; [(2020, 6, 15)],
+    :data_dir  =&gt; &quot;test_data&quot;,
+)
+
+results = solve_ots(opt_parameters)
+
+# DCOPF results have no switching: results[:switched_off_lines][d] is empty
+# and risk_reduction_pct is 0. Investment options (battery, solar, hardening)
+# can still be enabled in the same Dict.</code></pre><h2 id="Example-2c:-Nonlinear-AC-Verification-and-Recovery"><a class="docs-heading-anchor" href="#Example-2c:-Nonlinear-AC-Verification-and-Recovery">Example 2c: Nonlinear AC Verification and Recovery</a><a id="Example-2c:-Nonlinear-AC-Verification-and-Recovery-1"></a><a class="docs-heading-anchor-permalink" href="#Example-2c:-Nonlinear-AC-Verification-and-Recovery" title="Permalink"></a></h2><pre><code class="language-julia hljs"># First solve a planning model
+planning_results = solve_ots(Dict(
+    :network          =&gt; &quot;RTS&quot;,
+    :model            =&gt; &quot;DCOTS&quot;,
+    :objective        =&gt; &quot;loadshed&quot;,
+    :times            =&gt; [(2020, 6, 15)],
+    :data_dir         =&gt; &quot;test_data&quot;,
+    :switching_method =&gt; &quot;thresholded&quot;,
+    :threshold_pct    =&gt; 0.75,
+))
+
+# Then replay those fixed planning decisions in a nonlinear AC recovery model
+ac_results = verify_ac(Dict(
+    :network  =&gt; &quot;RTS&quot;,
+    :mode     =&gt; &quot;ACOPF&quot;,        # redispatch + load shedding recovery
+    :times    =&gt; [(2020, 6, 15)],
+    :T        =&gt; 1,              # keep examples quick; default is 24
+    :data_dir =&gt; &quot;test_data&quot;,
+), planning_results)
+
+println(&quot;AC feasible all hours: $(ac_results[:feasible_all])&quot;)
+println(&quot;AC failed hours: $(ac_results[:failed_hours])&quot;)
+println(&quot;AC active load shed: $(ac_results[:total_p_load_shed])&quot;)</code></pre><h2 id="Example-3:-Fast-Thresholded-Method"><a class="docs-heading-anchor" href="#Example-3:-Fast-Thresholded-Method">Example 3: Fast Thresholded Method</a><a id="Example-3:-Fast-Thresholded-Method-1"></a><a class="docs-heading-anchor-permalink" href="#Example-3:-Fast-Thresholded-Method" title="Permalink"></a></h2><pre><code class="language-julia hljs"># Remove 50% of wildfire risk using fast heuristic
+opt_parameters = Dict(
+    :network =&gt; &quot;Texas7k&quot;,
+    :model =&gt; &quot;DCOTS&quot;,
+    :objective =&gt; &quot;loadshed&quot;,
+    :times =&gt; [(2020, 6, 11), (2020, 6, 12), (2020, 6, 13)],
+    :data_dir =&gt; &quot;test_data&quot;,
+    :switching_method =&gt; &quot;thresholded&quot;,
+    :threshold_pct =&gt; 0.5,  # De-energize lines to remove 50% of risk
+    :time_limit =&gt; 300.0
+)
+
+results = solve_ots(opt_parameters)
+
+# Compare performance vs optimal method
+println(&quot;Thresholded solve time: $(results[:solve_time])s&quot;)
+println(&quot;Load shed: $(results[:total_load_shed]) MW&quot;)</code></pre><h2 id="Example-4:-Multi-Period-Optimization"><a class="docs-heading-anchor" href="#Example-4:-Multi-Period-Optimization">Example 4: Multi-Period Optimization</a><a id="Example-4:-Multi-Period-Optimization-1"></a><a class="docs-heading-anchor-permalink" href="#Example-4:-Multi-Period-Optimization" title="Permalink"></a></h2><pre><code class="language-julia hljs"># Optimize for entire month
+opt_parameters = Dict(
+    :network =&gt; &quot;RTS&quot;,
+    :model =&gt; &quot;DCOTS&quot;,
+    :objective =&gt; &quot;wildfire&quot;,
+    :times =&gt; &quot;June 2020&quot;,  # All days in June
+    :data_dir =&gt; &quot;test_data&quot;,
+    :T =&gt; 24,
+    :mip_gap =&gt; 0.02
+)
+
+results = solve_ots(opt_parameters)
+
+# Analyze daily switching patterns
+for (day_idx, lines) in results[:switched_off_lines]
+    println(&quot;Day $day_idx: $(length(lines)) lines de-energized&quot;)
+end</code></pre><h2 id="Example-5:-CATS-Network-with-Custom-Risk-Metric"><a class="docs-heading-anchor" href="#Example-5:-CATS-Network-with-Custom-Risk-Metric">Example 5: CATS Network with Custom Risk Metric</a><a id="Example-5:-CATS-Network-with-Custom-Risk-Metric-1"></a><a class="docs-heading-anchor-permalink" href="#Example-5:-CATS-Network-with-Custom-Risk-Metric" title="Permalink"></a></h2><pre><code class="language-julia hljs">opt_parameters = Dict(
+    :network =&gt; &quot;CATS&quot;,
+    :model =&gt; &quot;DCOTS&quot;,
+    :objective =&gt; &quot;tradeoff&quot;,
+    :times =&gt; [(2020, 6, 15)],
+    :data_dir =&gt; &quot;test_data&quot;,
+    :risk_metric =&gt; &quot;max_wfpi&quot;,  # Use maximum WFPI instead of cumulative
+    :tradeoff_weight =&gt; 0.6
+)
+
+results = solve_ots(opt_parameters)</code></pre><h2 id="Example-6:-Cost-Minimization"><a class="docs-heading-anchor" href="#Example-6:-Cost-Minimization">Example 6: Cost Minimization</a><a id="Example-6:-Cost-Minimization-1"></a><a class="docs-heading-anchor-permalink" href="#Example-6:-Cost-Minimization" title="Permalink"></a></h2><pre><code class="language-julia hljs">opt_parameters = Dict(
+    :network =&gt; &quot;RTS&quot;,
+    :model =&gt; &quot;DCOTS&quot;,
+    :objective =&gt; &quot;cost&quot;,
+    :times =&gt; [(2020, 6, 15)],
+    :data_dir =&gt; &quot;test_data&quot;,
+    :voll =&gt; 10000.0,  # $10,000/MWh value of lost load
+    :threshold_pct =&gt; 0.3  # Still enforce some risk reduction
+)
+
+results = solve_ots(opt_parameters)
+
+println(&quot;Total cost: \$$(results[:objective_value])&quot;)</code></pre><h2 id="Example-7:-Save-Results-to-File"><a class="docs-heading-anchor" href="#Example-7:-Save-Results-to-File">Example 7: Save Results to File</a><a id="Example-7:-Save-Results-to-File-1"></a><a class="docs-heading-anchor-permalink" href="#Example-7:-Save-Results-to-File" title="Permalink"></a></h2><pre><code class="language-julia hljs"># Save results as JLD2 file
+opt_parameters = Dict(
+    :network =&gt; &quot;Texas2k&quot;,
+    :model =&gt; &quot;DCOTS&quot;,
+    :objective =&gt; &quot;loadshed&quot;,
+    :times =&gt; &quot;June 2020&quot;,
+    :data_dir =&gt; &quot;test_data&quot;,
+    :switching_method =&gt; &quot;thresholded&quot;,
+    :threshold_pct =&gt; 0.4,
+    :output_format =&gt; &quot;jld2&quot;,
+    :output_path =&gt; &quot;results/texas2k_june2020_results.jld2&quot;
+)
+
+results = solve_ots(opt_parameters)
+
+# Load results later
+using JLD2
+loaded_results = load(&quot;results/texas2k_june2020_results.jld2&quot;)</code></pre><h2 id="Example-8:-Export-Model-and-Solver-Logs"><a class="docs-heading-anchor" href="#Example-8:-Export-Model-and-Solver-Logs">Example 8: Export Model and Solver Logs</a><a id="Example-8:-Export-Model-and-Solver-Logs-1"></a><a class="docs-heading-anchor-permalink" href="#Example-8:-Export-Model-and-Solver-Logs" title="Permalink"></a></h2><pre><code class="language-julia hljs"># Save the optimization model formulation and Gurobi solver log
+opt_parameters = Dict(
+    :network =&gt; &quot;RTS&quot;,
+    :model =&gt; &quot;DCOTS&quot;,
+    :objective =&gt; &quot;tradeoff&quot;,
+    :times =&gt; [(2020, 6, 15)],
+    :data_dir =&gt; &quot;test_data&quot;,
+    :tradeoff_weight =&gt; 0.5,
+    :lp_str =&gt; &quot;models/rts_dcots_tradeoff.lp&quot;,  # Save model to LP file
+    :log_str =&gt; &quot;logs/rts_dcots_solve.log&quot;      # Save Gurobi log to file
+)
+
+results = solve_ots(opt_parameters)
+
+# The LP file contains the full model formulation:
+# - Decision variables, objective function, all constraints
+# The log file contains Gurobi&#39;s detailed solver output:
+# - Presolve reductions, barrier/simplex iterations, MIP progress
+# - Useful for debugging, performance analysis, and verification</code></pre><h2 id="Example-9:-Comparison-Study"><a class="docs-heading-anchor" href="#Example-9:-Comparison-Study">Example 9: Comparison Study</a><a id="Example-9:-Comparison-Study-1"></a><a class="docs-heading-anchor-permalink" href="#Example-9:-Comparison-Study" title="Permalink"></a></h2><pre><code class="language-julia hljs"># Compare optimal vs thresholded methods
+function compare_methods(network, date, threshold_pct)
+    # Optimal method
+    opt_params_optimal = Dict(
+        :network =&gt; network,
+        :model =&gt; &quot;DCOTS&quot;,
+        :objective =&gt; &quot;loadshed&quot;,
+        :times =&gt; [date],
+        :data_dir =&gt; &quot;test_data&quot;,
+        :switching_method =&gt; &quot;optimal&quot;,
+        :threshold_pct =&gt; threshold_pct
+    )
+    results_optimal = solve_ots(opt_params_optimal)
+
+    # Thresholded method
+    opt_params_threshold = Dict(
+        :network =&gt; network,
+        :model =&gt; &quot;DCOTS&quot;,
+        :objective =&gt; &quot;loadshed&quot;,
+        :times =&gt; [date],
+        :data_dir =&gt; &quot;test_data&quot;,
+        :switching_method =&gt; &quot;thresholded&quot;,
+        :threshold_pct =&gt; threshold_pct
+    )
+    results_threshold = solve_ots(opt_params_threshold)
+
+    # Compare
+    println(&quot;\nComparison for $network on $date:&quot;)
+    println(&quot;Optimal    - Time: $(results_optimal[:solve_time])s, Load shed: $(results_optimal[:total_load_shed]) MW&quot;)
+    println(&quot;Thresholded - Time: $(results_threshold[:solve_time])s, Load shed: $(results_threshold[:total_load_shed]) MW&quot;)
+    println(&quot;Speedup: $(results_optimal[:solve_time] / results_threshold[:solve_time])x&quot;)
+    println(&quot;Load shed increase: $(results_threshold[:total_load_shed] - results_optimal[:total_load_shed]) MW&quot;)
+end
+
+compare_methods(&quot;RTS&quot;, (2020, 6, 15), 0.5)</code></pre><h2 id="Example-10:-Line-Hardening-with-Loadshed-Objective"><a class="docs-heading-anchor" href="#Example-10:-Line-Hardening-with-Loadshed-Objective">Example 10: Line Hardening with Loadshed Objective</a><a id="Example-10:-Line-Hardening-with-Loadshed-Objective-1"></a><a class="docs-heading-anchor-permalink" href="#Example-10:-Line-Hardening-with-Loadshed-Objective" title="Permalink"></a></h2><pre><code class="language-julia hljs"># Optimize line hardening to reduce wildfire risk while minimizing load shedding
+opt_parameters = Dict(
+    :network =&gt; &quot;RTS&quot;,
+    :model =&gt; &quot;DCOTS&quot;,
+    :objective =&gt; &quot;loadshed&quot;,
+    :times =&gt; [(2020, 6, 15)],
+    :data_dir =&gt; &quot;test_data&quot;,
+    :hardening_enabled =&gt; true,
+    :infrastructure_budget =&gt; 50e6,  # $50M shared budget
+    :hardening_cost_per_mile =&gt; 7e6,  # $7M per mile
+    :hardening_effectiveness =&gt; 1.0,  # 100% risk mitigation
+    :hardening_enforce_energization =&gt; true
+)
+
+results = solve_ots(opt_parameters)
+
+# Analyze hardening results
+println(&quot;Lines hardened: $(length(results[:hardened_lines]))&quot;)
+println(&quot;Hardening cost: \$$(results[:hardening_cost]/1e6)M&quot;)
+println(&quot;Risk mitigated by hardening: $(results[:mitigated_risk])&quot;)
+println(&quot;Remaining active risk: $(results[:active_risk])&quot;)
+println(&quot;Total risk reduction: $(results[:risk_reduction_pct])%&quot;)
+
+# View which lines were hardened
+for line_id in results[:hardened_lines]
+    println(&quot;  Line $line_id: hardened (y=$( results[:y][line_id]))&quot;)
+end</code></pre><h2 id="Example-11:-Cost-Minimization-with-Hardening"><a class="docs-heading-anchor" href="#Example-11:-Cost-Minimization-with-Hardening">Example 11: Cost Minimization with Hardening</a><a id="Example-11:-Cost-Minimization-with-Hardening-1"></a><a class="docs-heading-anchor-permalink" href="#Example-11:-Cost-Minimization-with-Hardening" title="Permalink"></a></h2><pre><code class="language-julia hljs"># Optimize hardening and operations together to minimize total cost
+opt_parameters = Dict(
+    :network =&gt; &quot;RTS&quot;,
+    :model =&gt; &quot;DCOTS&quot;,
+    :objective =&gt; &quot;cost&quot;,
+    :times =&gt; [(2020, 6, 15)],
+    :data_dir =&gt; &quot;test_data&quot;,
+    :voll =&gt; 10000.0,
+    :hardening_enabled =&gt; true,
+    :hardening_cost_per_mile =&gt; 7e6
+    # No budget limit - optimizer decides based on cost-benefit analysis
+)
+
+results = solve_ots(opt_parameters)
+
+println(&quot;Total cost: \$$(results[:objective_value])&quot;)
+println(&quot;Hardening cost: \$$(results[:hardening_cost]/1e6)M&quot;)
+println(&quot;Generation + load shed cost: \$$(results[:objective_value] - results[:hardening_cost])&quot;)</code></pre><h2 id="Example-12:-Thresholded-Switching-with-Optimal-Hardening"><a class="docs-heading-anchor" href="#Example-12:-Thresholded-Switching-with-Optimal-Hardening">Example 12: Thresholded Switching with Optimal Hardening</a><a id="Example-12:-Thresholded-Switching-with-Optimal-Hardening-1"></a><a class="docs-heading-anchor-permalink" href="#Example-12:-Thresholded-Switching-with-Optimal-Hardening" title="Permalink"></a></h2><pre><code class="language-julia hljs"># Switching decisions pre-computed (thresholded), hardening solved optimally (MIP)
+# Hardenable lines that were thresholded off can be re-energized by hardening them
+opt_parameters = Dict(
+    :network =&gt; &quot;Texas7k&quot;,
+    :model =&gt; &quot;DCOTS&quot;,
+    :objective =&gt; &quot;loadshed&quot;,
+    :times =&gt; [(2020, 6, 11), (2020, 6, 12)],
+    :data_dir =&gt; &quot;test_data&quot;,
+    :switching_method =&gt; &quot;thresholded&quot;,
+    :threshold_pct =&gt; 0.5,  # Pre-de-energize top-50%-risk lines
+    :hardening_enabled =&gt; true,
+    :infrastructure_budget =&gt; 100e6,  # $100M shared budget
+    :hardening_effectiveness =&gt; 0.9   # 90% risk reduction when hardened
+)
+
+results = solve_ots(opt_parameters)
+
+# Compare hardening vs switching for risk mitigation
+println(&quot;Risk mitigated by hardening: $(results[:mitigated_risk])&quot;)
+println(&quot;Risk removed by switching: $(results[:removed_risk])&quot;)
+println(&quot;Total risk reduction: $(results[:risk_reduction_pct])%&quot;)
+println(&quot;Solve time: $(results[:solve_time])s&quot;)</code></pre><h2 id="Example-13:-Battery-Installation-on-CATS-Network"><a class="docs-heading-anchor" href="#Example-13:-Battery-Installation-on-CATS-Network">Example 13: Battery Installation on CATS Network</a><a id="Example-13:-Battery-Installation-on-CATS-Network-1"></a><a class="docs-heading-anchor-permalink" href="#Example-13:-Battery-Installation-on-CATS-Network" title="Permalink"></a></h2><pre><code class="language-julia hljs"># Install batteries on the California Test System during a high wildfire risk day
+# Verified result: 29 buses, ~1517 MWh installed, $303M cost, 0 MW load shed
+opt_parameters = Dict(
+    :network =&gt; &quot;CATS&quot;,
+    :model =&gt; &quot;DCOTS&quot;,
+    :objective =&gt; &quot;loadshed&quot;,
+    :times =&gt; [(2020, 6, 21)],
+    :data_dir =&gt; &quot;test_data&quot;,
+    :switching_method =&gt; &quot;thresholded&quot;,
+    :threshold_pct =&gt; 0.75,          # De-energize lines to remove 75% of risk
+    :battery_enabled =&gt; true,
+    :battery_cost_per_pu =&gt; 2e7,     # $20M per 100 MWh
+    :infrastructure_budget =&gt; 500e6, # $500M shared budget
+    :time_limit =&gt; 3600.0
+)
+
+results = solve_ots(opt_parameters)
+
+# Confirm batteries were installed
+println(&quot;Buses with batteries: $(length(results[:batteries_installed]))&quot;)
+println(&quot;Total capacity: $(round(results[:total_battery_capacity]*100, digits=1)) MWh&quot;)
+println(&quot;Battery cost: \$$(round(results[:battery_cost]/1e6, digits=1))M&quot;)
+println(&quot;Load shed: $(results[:total_load_shed]) MW&quot;)
+
+# Inspect 24-hour dispatch for a specific bus
+bus = results[:batteries_installed][1]
+capacity = results[:x][bus]
+println(&quot;\nDispatch at bus $bus ($(round(capacity*100, digits=1)) MWh):&quot;)
+println(&quot;Hour | Charge (p.u.) | Discharge (p.u.) | SOC (%)&quot;)
+for t in 1:24
+    charge    = results[:p_charge][(1, t, bus)]
+    discharge = results[:p_discharge][(1, t, bus)]
+    soc_pct   = 100 * results[:soc][(1, t, bus)] / capacity
+    println(&quot;  $t  |   $(round(charge, digits=4))   |   $(round(discharge, digits=4))   |  $(round(soc_pct, digits=1))%&quot;)
+end</code></pre><p><strong>Notes on this example:</strong></p><ul><li>CATS is a large network (8,870 buses, 10,823 lines) — expect ~4 minute solve time</li><li>On a single high-risk day, batteries start fully charged and purely discharge to cover load shed from de-energized lines (no charging needed within the day)</li><li>The <code>time_limit</code> of 3600s is recommended for CATS; smaller networks solve much faster</li></ul><h2 id="Example-14:-Custom-Wildfire-Risk-Data"><a class="docs-heading-anchor" href="#Example-14:-Custom-Wildfire-Risk-Data">Example 14: Custom Wildfire Risk Data</a><a id="Example-14:-Custom-Wildfire-Risk-Data-1"></a><a class="docs-heading-anchor-permalink" href="#Example-14:-Custom-Wildfire-Risk-Data" title="Permalink"></a></h2><p>You can bypass automatic data loading by providing your own wildfire risk data via the <code>:risk_per_line</code> parameter. This is useful for custom risk models, sensitivity analysis, or external data sources.</p><pre><code class="language-julia hljs">using PowerGridPlanning
+
+# Define custom risk: Dict{day_index =&gt; Dict{line_id =&gt; risk_value}}
+custom_risk = Dict{Int, Dict{Int, Float64}}(
+    1 =&gt; Dict(5 =&gt; 0.8, 12 =&gt; 1.2, 23 =&gt; 0.5, 45 =&gt; 0.9),  # Day 1
+    2 =&gt; Dict(5 =&gt; 0.9, 12 =&gt; 1.1, 23 =&gt; 0.4),              # Day 2
+    3 =&gt; Dict(8 =&gt; 0.7, 23 =&gt; 0.6, 45 =&gt; 1.0)               # Day 3
+)
+
+opt_parameters = Dict(
+    :network =&gt; &quot;RTS&quot;,
+    :model =&gt; &quot;DCOTS&quot;,
+    :objective =&gt; &quot;tradeoff&quot;,
+    :times =&gt; [(2020, 6, 15), (2020, 6, 16), (2020, 6, 17)],
+    :data_dir =&gt; &quot;test_data&quot;,
+    :risk_per_line =&gt; custom_risk,
+    :tradeoff_weight =&gt; 0.5
+)
+
+results = solve_ots(opt_parameters)
+
+# Output includes validation:
+# ✓ risk_per_line validation passed:
+#   - 3 days of data
+#   - 11 total line-day risk entries
+#   - Min/Max risky lines per day: 3/4
+# ✓ Using user-provided risk_per_line data
+
+println(&quot;Active risk: $(results[:active_risk])&quot;)
+println(&quot;Risk reduction: $(results[:risk_reduction_pct])%&quot;)</code></pre><p><strong>Notes:</strong></p><ul><li>The outer key is the day index (1 to D), matching the order of <code>:times</code></li><li>The inner dict maps line IDs to risk values — only lines with nonzero risk need entries</li><li>The package validates the structure and reports statistics when custom data is provided</li></ul><h2 id="Example-15:-Combined-Infrastructure-Optimization"><a class="docs-heading-anchor" href="#Example-15:-Combined-Infrastructure-Optimization">Example 15: Combined Infrastructure Optimization</a><a id="Example-15:-Combined-Infrastructure-Optimization-1"></a><a class="docs-heading-anchor-permalink" href="#Example-15:-Combined-Infrastructure-Optimization" title="Permalink"></a></h2><p>Jointly optimize solar PV, battery storage, and line hardening under a shared infrastructure budget.</p><pre><code class="language-julia hljs">using PowerGridPlanning
+
+opt_parameters = Dict(
+    :network =&gt; &quot;RTS&quot;,
+    :model =&gt; &quot;DCOTS&quot;,
+    :objective =&gt; &quot;loadshed&quot;,
+    :times =&gt; [(2020, 6, 15)],
+    :data_dir =&gt; &quot;test_data&quot;,
+    :switching_method =&gt; &quot;thresholded&quot;,
+    :threshold_pct =&gt; 0.75,
+    # Solar
+    :solar_enabled =&gt; true,
+    :solar_cost_per_pu =&gt; 5e7,                                        # $50M per 100 MW
+    :solar_data_path =&gt; &quot;test_data/solar_data/RTS/solar_data.csv&quot;,
+    # Battery
+    :battery_enabled =&gt; true,
+    :battery_cost_per_pu =&gt; 2e7,     # $20M per 100 MWh
+    # Hardening
+    :hardening_enabled =&gt; true,
+    :hardening_cost_per_mile =&gt; 7e6,
+    # Shared budget for all three
+    :infrastructure_budget =&gt; 500e6  # $500M
+)
+
+results = solve_ots(opt_parameters)
+
+# The optimizer allocates the shared budget across all three investments
+println(&quot;Solar:     \$$(round(results[:solar_cost]/1e6, digits=1))M — $(length(results[:solar_installed])) buses&quot;)
+println(&quot;Batteries: \$$(round(results[:battery_cost]/1e6, digits=1))M — $(length(results[:batteries_installed])) buses&quot;)
+println(&quot;Hardening: \$$(round(results[:hardening_cost]/1e6, digits=1))M — $(length(results[:hardened_lines])) lines&quot;)
+total_infra = results[:solar_cost] + results[:battery_cost] + results[:hardening_cost]
+println(&quot;Total:     \$$(round(total_infra/1e6, digits=1))M / \$500M budget&quot;)
+println(&quot;Load shed: $(results[:total_load_shed]) MW&quot;)</code></pre><h2 id="Example-16:-Auto-Plotting-via-opt_parameters"><a class="docs-heading-anchor" href="#Example-16:-Auto-Plotting-via-opt_parameters">Example 16: Auto-Plotting via opt_parameters</a><a id="Example-16:-Auto-Plotting-via-opt_parameters-1"></a><a class="docs-heading-anchor-permalink" href="#Example-16:-Auto-Plotting-via-opt_parameters" title="Permalink"></a></h2><p>Trigger plotting automatically at the end of <code>solve_ots()</code> using the <code>:plots</code> and <code>:plot_dir</code> parameters, without calling <code>plot_results()</code> separately.</p><pre><code class="language-julia hljs">using PowerGridPlanning
+
+# &quot;all&quot; generates network_overview + relevant timeseries plots
+opt_parameters = Dict(
+    :network =&gt; &quot;RTS&quot;,
+    :model =&gt; &quot;DCOTS&quot;,
+    :objective =&gt; &quot;loadshed&quot;,
+    :times =&gt; [(2020, 6, 15)],
+    :data_dir =&gt; &quot;test_data&quot;,
+    :battery_enabled =&gt; true,
+    :battery_cost_per_pu =&gt; 2e7,
+    :infrastructure_budget =&gt; 500e6,
+    :plots =&gt; &quot;all&quot;,                    # Auto-plot after solve
+    :plot_dir =&gt; &quot;figures/rts_run1&quot;     # Directory created automatically if needed
+)
+
+results = solve_ots(opt_parameters)
+# Plots saved to figures/rts_run1/ automatically
+
+# Other :plots options:
+#   false or &quot;none&quot;       — no plots (default)
+#   &quot;all&quot;                 — network_overview + all applicable timeseries
+#   &quot;inv_only&quot;            — network_overview only
+#   &quot;timeseries_only&quot;     — timeseries plots only (load_shed, battery_dispatch, etc.)</code></pre><h2 id="Example-17:-Solar-PV-Installation-with-Reactive-Power-Support"><a class="docs-heading-anchor" href="#Example-17:-Solar-PV-Installation-with-Reactive-Power-Support">Example 17: Solar PV Installation with Reactive Power Support</a><a id="Example-17:-Solar-PV-Installation-with-Reactive-Power-Support-1"></a><a class="docs-heading-anchor-permalink" href="#Example-17:-Solar-PV-Installation-with-Reactive-Power-Support" title="Permalink"></a></h2><p>Solar PV installation planning with real solar irradiance data and inverter reactive power capability in the LACOTS model.</p><pre><code class="language-julia hljs">using PowerGridPlanning
+
+# LACOTS solar with reactive power support
+opt_parameters = Dict(
+    :network =&gt; &quot;RTS&quot;,
+    :model =&gt; &quot;LACOTS&quot;,
+    :objective =&gt; &quot;loadshed&quot;,
+    :times =&gt; [(2020, 6, 15)],
+    :data_dir =&gt; &quot;test_data&quot;,
+    :switching_method =&gt; &quot;thresholded&quot;,
+    :threshold_pct =&gt; 0.75,
+    :solar_enabled =&gt; true,
+    :solar_cost_per_pu =&gt; 5e7,                                       # $50M per 100 MW
+    :solar_data_path =&gt; &quot;test_data/solar_data/RTS/solar_data.csv&quot;,   # Hourly capacity factors
+    :infrastructure_budget =&gt; 500e6,
+    :linearized_solar_power =&gt; true    # Rectangular inverter capability: |Q| ≤ cf × S
+    # Alternative: linearized_solar_power =&gt; false  for circular: P² + Q² ≤ S²
+)
+
+results = solve_ots(opt_parameters)
+
+println(&quot;Solar installed: $(length(results[:solar_installed])) buses&quot;)
+println(&quot;Total capacity: $(round(results[:total_solar_capacity]*100, digits=1)) MW&quot;)
+println(&quot;Total P generation: $(round(results[:total_solar_generation], digits=2)) p.u.·h&quot;)
+println(&quot;Total Q injection: $(round(results[:total_solar_q_injection], digits=2)) p.u.·h&quot;)
+println(&quot;Solar cost: \$$(round(results[:solar_cost]/1e6, digits=1))M&quot;)
+
+# Show hourly dispatch for an installed bus
+bus = results[:solar_installed][1]
+cap = results[:s][bus]
+println(&quot;\nBus $bus ($(round(cap*100, digits=1)) MW) hourly P/Q:&quot;)
+for t in 1:24
+    p = round(results[:p_solar][(1, t, bus)], digits=4)
+    q = round(results[:q_solar][(1, t, bus)], digits=4)
+    println(&quot;  Hour $t: P=$p, Q=$q&quot;)
+end</code></pre><p><strong>Notes on this example:</strong></p><ul><li>Solar capacity factors are loaded from CSV with columns <code>Bus_ID, Hour, AC_Output_pu, DC_Output_pu</code></li><li>AC output (post-inverter) is used as the capacity factor — the correct value for grid-side modeling</li><li><code>q_solar</code> is bidirectional: positive = injection (capacitive), negative = absorption (inductive)</li><li>At night (cf=0), <code>q_solar</code> is forced to zero (inverter offline)</li><li>The linearized mode bounds Q by <code>cf × s[n]</code>, while nonlinear allows Q up to <code>s[n]</code> when P is low</li></ul></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../cli/">« Command-Line Interface</a><a class="docs-footer-nextpage" href="../../reference/results/">Results Dictionary »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Friday 17 July 2026 01:26">Friday 17 July 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
