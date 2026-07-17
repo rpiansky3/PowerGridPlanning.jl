@@ -59,3 +59,4 @@ test_data/USGS_FPI/cache/
 test_data/solar_data/Texas7k/
 test_data/solar_data/CATS/
 test_data/solar_data/WECC10k/
+docs/build/

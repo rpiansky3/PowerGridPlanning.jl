@@ -123,7 +123,7 @@ Solve an Optimal Transmission Switching problem with wildfire risk consideration
 - `:tradeoff_weight` => Float64 - For "tradeoff" objective, 0=loadshed, 1=wildfire (default: 0.5)
 - `:threshold` => Float64 - Risk threshold (loadshed obj) or loadshed threshold (wildfire obj). Required for "thresholded" method.
 - `:threshold_pct` => Float64 - Percentage threshold (0.8 = keep 80% of risk, remove 20%)
-- `:voll` => Float64 - Value of Lost Load in \$/MWh for "cost" objective (default: 10000.0)
+- `:voll` => Float64 - Value of Lost Load in USD/MWh for "cost" objective (default: 10000.0)
 - `:warm_start` => Dict or String - For LACOTS: warm start values or "auto" to run DCOTS first
 - `:non_linear` => Bool - For LACOTS: use non-linear apparent power constraints (default: false)
 - `:time_limit` => Float64 - Solver time limit in seconds (default: 86400.0)
