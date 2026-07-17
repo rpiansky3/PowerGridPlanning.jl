@@ -14,10 +14,10 @@ Load US state boundary shapes for basemap plotting.
 
 Returns a Vector of Plots.Shape objects (one per polygon part) for the requested states.
 """
-function load_us_basemap(states::Vector{String})
+function load_us_basemap(states::Vector{String}; data_dir::String="data")
     base_path = something(pkgdir(PowerGridPlanning), dirname(dirname(@__FILE__)))
-    shp_path = joinpath(base_path, "data", "US_Shapefiles", "cb_2018_us_state_500k.shp")
-    dbf_path = joinpath(base_path, "data", "US_Shapefiles", "cb_2018_us_state_500k.dbf")
+    shp_path = joinpath(base_path, data_dir, "US_Shapefiles", "cb_2018_us_state_500k.shp")
+    dbf_path = joinpath(base_path, data_dir, "US_Shapefiles", "cb_2018_us_state_500k.dbf")
 
     if !isfile(shp_path)
         @warn "US shapefile not found at $shp_path — basemap will be skipped"
@@ -216,7 +216,11 @@ function load_results_for_plotting(input)
         return input
     elseif input isa String
         if endswith(input, ".jld2")
-            return JLD2.load(input, "results")
+            contents = JLD2.load(input)
+            haskey(contents, "results") && return contents["results"]
+            # Files written before the save-key fix used the variable name as key
+            haskey(contents, "results_to_save") && return contents["results_to_save"]
+            error("No results found in $input (expected key \"results\"; got: $(join(keys(contents), ", ")))")
         else
             error("Only .jld2 files supported for path-based loading. Got: $input")
         end
@@ -297,13 +301,13 @@ Returns (p, ref, bus_coords, bus_xy) where:
   bus_xy    — Dict{Int => (x,y)} in Web Mercator
 """
 function build_geo_context(network_name::String, title::String="";
-                           case_file=nothing, bus_coords_src=nothing)
+                           case_file=nothing, bus_coords_src=nothing, data_dir::String="data")
     config = network_plot_config(network_name)
-    shapes = load_us_basemap(config.states)
+    shapes = load_us_basemap(config.states; data_dir=data_dir)
 
     # Load network topology and bus coordinates first so we can compute extents
     # before creating the plot (avoids xlims!/ylims! mutation which resets top_margin)
-    network_data = case_file === nothing ? load_network(network_name) :
+    network_data = case_file === nothing ? load_network(network_name, data_dir) :
                                            load_case_file(case_file)
     ref = PowerIO.build_ref(network_data)
 
@@ -311,6 +315,7 @@ function build_geo_context(network_name::String, title::String="";
         :bus_coords => bus_coords_src,
         :case_file  => case_file,
         :network    => network_name,
+        :data_dir   => data_dir,
     ))
 
     # Build Web Mercator lookup

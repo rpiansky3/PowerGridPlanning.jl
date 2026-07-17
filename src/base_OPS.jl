@@ -116,7 +116,7 @@ function build_and_solve_model(opt_parameters::Dict, preprocessed::Dict)
     catch
         @warn "Solver $(solver_name(model)) does not support a time limit; ignoring :time_limit"
     end
-    set_optimizer_attribute(model, MOI.Silent(), false)
+    set_optimizer_attribute(model, MOI.Silent(), get(opt_parameters, :silent, false) == true)
 
     log_str = opt_parameters[:log_str]
     if is_gurobi
@@ -477,17 +477,23 @@ function extract_results(model::JuMP.Model, preprocessed::Dict, opt_parameters::
         hardenable_set = Set(hardenable_lines)
 
         active_risk = 0.0
+        switched_risk_removed = 0.0
+        hardened_risk_removed = 0.0
         for d in 1:D
             for l in risky_lines[d]
                 z_val = results[:z][(d, l)]
                 y_val = l in hardenable_set ? results[:y][l] : 0.0
                 # Risk = z[d,l] * risk[d,l] * (1 - effectiveness * y[l])
                 active_risk += z_val * wf_data[d][l] * (1 - effectiveness * y_val)
+                switched_risk_removed += (1 - z_val) * wf_data[d][l]
+                hardened_risk_removed += z_val * effectiveness * y_val * wf_data[d][l]
             end
         end
     else
         # Standard active risk without hardening
         active_risk = sum(results[:z][(d, l)] * wf_data[d][l] for d in 1:D for l in risky_lines[d]; init=0.0)
+        switched_risk_removed = total_risk - active_risk
+        hardened_risk_removed = 0.0
     end
 
     removed_risk = total_risk - active_risk
@@ -495,6 +501,8 @@ function extract_results(model::JuMP.Model, preprocessed::Dict, opt_parameters::
     results[:total_risk] = total_risk
     results[:active_risk] = active_risk
     results[:removed_risk] = removed_risk
+    results[:switched_risk_removed] = switched_risk_removed
+    results[:hardened_risk_removed] = hardened_risk_removed
     results[:risk_reduction_pct] = total_risk > 0 ? (removed_risk / total_risk) * 100 : 0.0
 
     # Lines that were switched off (per day)

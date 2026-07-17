@@ -392,6 +392,33 @@ HIGHS_AVAILABLE && @eval using HiGHS
         )))
         @test r_thr[:status] in (MOI.OPTIMAL, MOI.TIME_LIMIT)
         @test r_thr[:risk_reduction_pct] >= 25.0 - 1e-6
+
+        # Hardening + tradeoff objective must stay a MILP (regression: the z*y
+        # risk term was quadratic, which HiGHS rejects — Gurobi-only before).
+        # Cover both energization modes: linear decomposition (default) and
+        # the linearized-product path (:hardening_enforce_energization=false).
+        for enforce in (true, false)
+            r_hard = solve_ots(merge(base, Dict{Symbol,Any}(
+                :model => "DCOTS",
+                :objective => "tradeoff",
+                :tradeoff_weight => 0.5,
+                :T => 2,
+                :hardening_enabled => true,
+                :hardening_effectiveness => 0.9,
+                :hardening_enforce_energization => enforce,
+                :infrastructure_budget => 1e8,
+            )))
+            @test r_hard[:status] in (MOI.OPTIMAL, MOI.TIME_LIMIT)
+            # Risk decomposition: total = active + switched-removed + hardened-removed
+            @test isapprox(r_hard[:total_risk],
+                           r_hard[:active_risk] + r_hard[:switched_risk_removed] +
+                           r_hard[:hardened_risk_removed]; rtol=1e-6)
+            if enforce
+                # Hardened lines must be energized on every day they carry risk
+                off = Set(l for d in 1:1 for l in r_hard[:switched_off_lines][d])
+                @test isempty(intersect(Set(r_hard[:hardened_lines]), off))
+            end
+        end
     end
 end
 

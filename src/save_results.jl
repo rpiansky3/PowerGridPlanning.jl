@@ -42,7 +42,10 @@ function save_jld2(results::Dict, filepath::String)
     # Convert DenseAxisArrays to regular arrays for JLD2 compatibility
     results_to_save = convert_for_jld2(results)
 
-    JLD2.@save filepath results_to_save
+    # Store under the key "results" — the key load_results_for_plotting and the
+    # documented `JLD2.load(path, "results")` pattern expect. (Earlier releases
+    # saved under "results_to_save", which path-based plotting couldn't read.)
+    JLD2.jldsave(filepath; results = results_to_save)
 end
 
 """

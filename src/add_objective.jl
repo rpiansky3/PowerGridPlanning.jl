@@ -54,12 +54,42 @@ function add_objective!(model::JuMP.Model, preprocessed::Dict, opt_parameters::D
             # Build set for efficient lookup
             hardenable_set = Set(hardenable_lines)
 
-            # Active risk with hardening: risk reduced by (effectiveness * y[l]) for hardenable lines
-            active_risk = sum(
-                wf_data[d][l] * z[(d, l)] * (l in hardenable_set ? (1 - effectiveness * y[l]) : 1.0)
-                for d in 1:D for l in risky_lines[d];
-                init=0.0
-            )
+            # Active risk with hardening. The natural expression contains the binary
+            # product z*y (risk is only reduced when a line is BOTH energized and
+            # hardened), which would make the objective quadratic — solvers like
+            # HiGHS reject MIQPs, so the product must never reach the objective.
+            if opt_parameters[:hardening_enforce_energization]
+                # Default case: add_constraints enforces y[l] <= z[d,l] (hardened
+                # lines are always energized), so z*y == y identically and the
+                # risk decomposes linearly:
+                #   active = total energized risk - hardening risk reduction
+                active_risk = sum(
+                    wf_data[d][l] * z[(d, l)] -
+                    (l in hardenable_set ? wf_data[d][l] * effectiveness * y[l] : 0.0)
+                    for d in 1:D for l in risky_lines[d];
+                    init=0.0
+                )
+            else
+                # Opt-out case (hardened lines may still be de-energized): no
+                # coupling constraint ties y to z, so linearize the product with
+                # an auxiliary variable zy = z*y (exact for binaries).
+                zy_pairs = [(d, l) for d in 1:D for l in risky_lines[d] if l in hardenable_set]
+                zy = @variable(model, [p in zy_pairs], lower_bound = 0.0, upper_bound = 1.0,
+                               base_name = "zy_hardening")
+                model[:zy_hardening] = zy
+                for (d, l) in zy_pairs
+                    @constraint(model, zy[(d, l)] <= z[(d, l)])
+                    @constraint(model, zy[(d, l)] <= y[l])
+                    @constraint(model, zy[(d, l)] >= z[(d, l)] + y[l] - 1)
+                end
+
+                active_risk = sum(
+                    wf_data[d][l] * z[(d, l)] -
+                    (l in hardenable_set ? wf_data[d][l] * effectiveness * zy[(d, l)] : 0.0)
+                    for d in 1:D for l in risky_lines[d];
+                    init=0.0
+                )
+            end
         else
             # Standard active risk without hardening
             active_risk = sum(wf_data[d][l] * z[(d, l)] for d in 1:D for l in risky_lines[d]; init=0.0)
