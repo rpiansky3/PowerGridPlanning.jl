@@ -23,6 +23,56 @@ opt_parameters = Dict(
 )
 ```
 
+## User-Supplied Networks
+
+Any MATPOWER `.m` case can be used instead of the pre-configured network names by
+passing a file path via `:case_file`:
+
+```julia
+opt_parameters = Dict(
+    :case_file => "path/to/my_case.m",    # absolute, or relative to the current directory
+    :network   => "my_case",              # optional label for outputs (default: file basename)
+    :model     => "DCOPF",
+    :objective => "loadshed",
+    :times     => [(2021, 7, 15)],
+)
+results = solve_ots(opt_parameters)
+```
+
+Loads default to the case's `Pd`/`Qd` scaled by the built-in synthetic hourly profile,
+so a bare case file solves out of the box with `DCOPF`/`LACOPF`.
+
+A bare MATPOWER case carries no geographic data, so features that correlate the grid
+with external geodata cannot be auto-wired. Each degrades explicitly, at validation
+time, with an error naming the parameter to supply:
+
+| Feature | Requirement on a custom case |
+|---|---|
+| `DCOTS`/`LACOTS` switching | `:risk_per_line => Dict(day => Dict(line_id => risk))` — USGS FPI auto-load is unavailable. To build a risk file from geography, see `scripts/fetch_wfpi_data.jl` (needs bus coordinates). |
+| Hardening | `:bus_coords` (line lengths computed via haversine) or `:line_lengths => Dict(line_id => miles)` |
+| Plotting (`:plots`, `plot_results`) | `:bus_coords` |
+| Solar siting | Works without geodata: flat `:solar_capacity_factor_default` (default 0.3), or per-bus profiles via `:solar_data_path` |
+| Battery siting, load allocation | No geodata needed |
+| AC verification (`verify_ac`) | Pass the same `:case_file` |
+
+`:bus_coords` accepts a CSV path or a `DataFrame` with columns `Bus_ID`, `lat`, `lng`
+(common aliases such as `bus_id`, `latitude`, `lon` are recognized). It also works for
+named networks, overriding the bundled coordinate file.
+
+```julia
+# Wildfire-aware switching + hardening on a custom case
+opt_parameters = Dict(
+    :case_file         => "path/to/my_case.m",
+    :model             => "DCOTS",
+    :objective         => "loadshed",
+    :times             => [(2021, 7, 15)],
+    :risk_per_line     => Dict(1 => Dict(12 => 80.0, 47 => 55.0)),  # day => (line => risk)
+    :hardening_enabled => true,
+    :bus_coords        => "path/to/my_case_lat_lon.csv",
+    :infrastructure_budget => 1e8,
+)
+```
+
 ## Optional Parameters
 
 ```julia

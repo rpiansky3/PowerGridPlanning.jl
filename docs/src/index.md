@@ -16,7 +16,7 @@ This package provides a unified interface for transmission grid planning problem
 - **Solar PV installation**: Optimize solar capacity placement with hourly capacity factors and inverter reactive power support (LACOTS)
 - **Hazard-agnostic risk interface**: Accept any per-line risk signal; built-in loader for USGS Fire Potential Index (wildfire) included
 - **Multi-period optimization**: Solve for single days, specific date ranges, or entire months/years
-- **Flexible network support**: Pre-configured for 6+ realistic power system test cases (RTS-GMLC, CATS, Texas7k, ACTIVSg2000/10k, WECC240)
+- **Flexible network support**: Pre-configured for 6+ realistic power system test cases (RTS-GMLC, CATS, Texas7k, ACTIVSg2000/10k, WECC240), or bring any MATPOWER case via `:case_file` (see the [Usage Guide](guide/usage.md#User-Supplied-Networks))
 
 ## Installation
 

@@ -79,6 +79,13 @@ function verify_ac(ac_parameters::Dict, planning_results::Union{Dict,Nothing}=no
 end
 
 function validate_ac_parameters!(params::Dict)
+    # User-supplied case file: default the :network label from the file name
+    case_file = get(params, :case_file, nothing)
+    if case_file !== nothing
+        isfile(case_file) || error("Network case file not found: $case_file")
+        haskey(params, :network) || (params[:network] = first(splitext(basename(case_file))))
+    end
+
     for key in (:network, :times, :mode)
         haskey(params, key) || error("Missing required AC parameter: $key")
     end
@@ -120,6 +127,11 @@ function _preprocess_ac_parameters(params::Dict, planning_results::Union{Dict,No
         :data_dir => params[:data_dir],
         :output_format => "dict",
     )
+
+    # Forward user-supplied network sources so preprocess uses the same case
+    if get(params, :case_file, nothing) !== nothing
+        prep_params[:case_file] = params[:case_file]
+    end
 
     solar_caps = _planning_capacity_dict(planning_results, (:s, :solar_capacity))
     if !isempty(solar_caps)

@@ -14,7 +14,7 @@ A Julia package for transmission grid planning on realistic power system network
 - **Two switching methods**: Optimal MIP-based and fast thresholded heuristic
 - **Hazard-agnostic risk interface**: Accept any per-line risk signal; built-in loader for USGS Fire Potential Index (wildfire) included
 - **Multi-period optimization**: Single days, date ranges, or entire months/years
-- **Flexible network support**: Pre-configured for 6+ realistic test cases (RTS-GMLC, CATS, Texas7k, ACTIVSg2000/10k, WECC240)
+- **Flexible network support**: Pre-configured for 6+ realistic test cases (RTS-GMLC, CATS, Texas7k, ACTIVSg2000/10k, WECC240), or bring any MATPOWER case via `:case_file` with explicit hooks for supplying risk and coordinate data
 
 ## Documentation
 

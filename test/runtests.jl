@@ -204,6 +204,58 @@ end
     ))
 end
 
+# ── 8a. User-supplied networks (pre-solver validation) ───────────────────────
+@testset "User-supplied networks (validation)" begin
+    rts_case = joinpath(TEST_DATA, "networks", "RTS_GMLC.m")
+
+    # Nonexistent case file
+    @test_throws ErrorException solve_ots(Dict(
+        :case_file => joinpath(TEST_DATA, "networks", "no_such_case.m"),
+        :model => "DCOPF", :objective => "loadshed", :times => [(2020, 6, 15)],
+    ))
+
+    # OTS models require user-supplied risk on a custom case
+    err = try
+        solve_ots(Dict(
+            :case_file => rts_case, :model => "DCOTS",
+            :objective => "loadshed", :times => [(2020, 6, 15)],
+        ))
+        nothing
+    catch e
+        e
+    end
+    @test err isa ErrorException
+    @test occursin("risk_per_line", err.msg)
+
+    # Plots require bus coordinates on a custom case
+    @test_throws ErrorException solve_ots(Dict(
+        :case_file => rts_case, :model => "DCOPF",
+        :objective => "loadshed", :times => [(2020, 6, 15)],
+        :plots => "all",
+    ))
+
+    # Hardening requires a line-length source on a custom case
+    @test_throws ErrorException solve_ots(Dict(
+        :case_file => rts_case, :model => "DCOPF",
+        :objective => "loadshed", :times => [(2020, 6, 15)],
+        :hardening_enabled => true, :infrastructure_budget => 1e9,
+    ))
+
+    # Coordinate normalization: aliases map to canonical names, missing columns error
+    df = DataFrame(bus_id=[1, 2], latitude=[33.0, 34.0], lon=[-113.0, -114.0])
+    normalized = PowerGridPlanning.normalize_bus_coords!(copy(df))
+    @test all(c -> c in names(normalized), ["Bus_ID", "lat", "lng"])
+    @test_throws ErrorException PowerGridPlanning.normalize_bus_coords!(DataFrame(a=[1]))
+
+    # resolve_bus_coordinates: DataFrame passthrough and custom-case empty fallback
+    resolved = PowerGridPlanning.resolve_bus_coordinates(Dict{Symbol,Any}(
+        :bus_coords => df, :case_file => rts_case, :network => "custom"))
+    @test nrow(resolved) == 2
+    empty_coords = PowerGridPlanning.resolve_bus_coordinates(Dict{Symbol,Any}(
+        :bus_coords => nothing, :case_file => rts_case, :network => "custom"))
+    @test isempty(empty_coords)
+end
+
 # ── 9. AC verification pre-solver API and structure ──────────────────────────
 @testset "AC verification validation and structure" begin
     @test_throws ErrorException verify_ac(Dict(
@@ -340,6 +392,65 @@ HIGHS_AVAILABLE && @eval using HiGHS
         )))
         @test r_thr[:status] in (MOI.OPTIMAL, MOI.TIME_LIMIT)
         @test r_thr[:risk_reduction_pct] >= 25.0 - 1e-6
+    end
+end
+
+# ── 12. User-supplied networks: end-to-end solves ────────────────────────────
+# The bundled RTS case file stands in for "any MATPOWER case": it is loaded via
+# :case_file (arbitrary path), so none of the named-network wiring is exercised.
+@testset "User-supplied networks (HiGHS)" begin
+    if !HIGHS_AVAILABLE
+        @info "Skipping custom-network solve tests — HiGHS not installed (run via Pkg.test() to include it)"
+    else
+        rts_case = joinpath(TEST_DATA, "networks", "RTS_GMLC.m")
+        base = Dict(
+            :case_file  => rts_case,
+            :objective  => "loadshed",
+            :times      => [(2020, 6, 15)],
+            :T          => 4,
+            :optimizer  => HiGHS.Optimizer,
+            :time_limit => 300.0,
+        )
+
+        # DCOPF from a bare case file: no geography, no risk data, label defaulted
+        # from the file name. Solar siting works via the flat default capacity factor.
+        r_opf = solve_ots(merge(base, Dict{Symbol,Any}(
+            :model => "DCOPF",
+            :solar_enabled => true, :infrastructure_budget => 1e8,
+        )))
+        @test r_opf[:status] in (MOI.OPTIMAL, MOI.TIME_LIMIT)
+        @test r_opf[:network] == "RTS_GMLC"
+        @test r_opf[:total_load_shed] >= -1e-6
+
+        # DCOTS with user-supplied per-line risk (line IDs from the parsed case)
+        ref = PowerIO.build_ref(PowerIO.to_powermodels(PowerIO.parse_file(rts_case)))
+        risky = sort(collect(keys(ref[:branch])))[1:3]
+        risk = Dict(1 => Dict(l => 10.0 for l in risky))
+        r_ots = solve_ots(merge(base, Dict{Symbol,Any}(
+            :model => "DCOTS", :risk_per_line => deepcopy(risk), :network => "MyCase",
+        )))
+        @test r_ots[:status] in (MOI.OPTIMAL, MOI.TIME_LIMIT)
+        @test r_ots[:network] == "MyCase"
+        @test haskey(r_ots, :z) && !isempty(r_ots[:z])
+
+        # Hardening with user-supplied coordinates (CSV path)
+        coords_csv = joinpath(TEST_DATA, "bus_lat_lons", "RTS_GMLC_bus.csv")
+        r_hard = solve_ots(merge(base, Dict{Symbol,Any}(
+            :model => "DCOTS", :risk_per_line => deepcopy(risk),
+            :hardening_enabled => true, :bus_coords => coords_csv,
+            :infrastructure_budget => 1e9,
+        )))
+        @test r_hard[:status] in (MOI.OPTIMAL, MOI.TIME_LIMIT)
+        @test haskey(r_hard, :hardened_lines)
+
+        # Hardening with explicit line lengths instead of coordinates
+        lengths = Dict(l => 10.0 for l in keys(ref[:branch]))
+        r_len = solve_ots(merge(base, Dict{Symbol,Any}(
+            :model => "DCOTS", :risk_per_line => deepcopy(risk),
+            :hardening_enabled => true, :line_lengths => lengths,
+            :infrastructure_budget => 1e9,
+        )))
+        @test r_len[:status] in (MOI.OPTIMAL, MOI.TIME_LIMIT)
     end
 end
 

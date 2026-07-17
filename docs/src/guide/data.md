@@ -141,6 +141,10 @@ Load results back into Julia with `load_census_data(network; acs_year=2022)`.
 | ACTIVSg 10k | 10,000 | 2,485 | 12,706 | `"WECC10k"`, `"ACTIVSg10k"` |
 | WECC 240 | 240 | 143 | 448 | `"WECC240"`, `"pserc240"` |
 
+Any other MATPOWER `.m` case can be supplied directly via the `:case_file` parameter —
+see [User-Supplied Networks](usage.md#User-Supplied-Networks) for the geographic-data
+requirements of each feature (risk, hardening, plotting) on custom cases.
+
 ## Network Credits and Sources
 
 - **California Test System (CATS)**: Obtained from the [CATS-CaliforniaTestSystem](https://github.com/WISPO-POP/CATS-CaliforniaTestSystem) repository by WISPO-POP

@@ -291,7 +291,9 @@ function _plot_network_overview(results::Dict;
                                 census_overlay::Union{Nothing,Symbol}=nothing,
                                 kwargs...)
     network = get(results, :network, "RTS")
-    p, ref, bus_coords, bus_xy = build_geo_context(network, "$network $(_title_date_str(results, day))")
+    p, ref, bus_coords, bus_xy = build_geo_context(network, "$network $(_title_date_str(results, day))";
+                                                   case_file=get(results, :case_file, nothing),
+                                                   bus_coords_src=get(results, :bus_coords, nothing))
     risk_per_line = load_plot_risk_data(results)
     pd = results_to_plot_dict(results, day)
     pd_infra = results_to_plot_dict(results, nothing)

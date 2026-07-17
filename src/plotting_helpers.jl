@@ -241,6 +241,10 @@ function load_plot_risk_data(results::Dict)
     model_type = get(results, :model_type, "")
     is_opf_only(model_type) && return Dict{Int,Float64}()
 
+    # User-supplied case files have no on-disk risk data to correlate — the run
+    # used :risk_per_line, which isn't retained in results. Skip risk coloring.
+    get(results, :case_file, nothing) === nothing || return Dict{Int,Float64}()
+
     network = get(results, :network, "")
     times   = get(results, :times, nothing)
     (isempty(network) || times === nothing) && return Dict{Int,Float64}()
@@ -292,16 +296,22 @@ Returns (p, ref, bus_coords, bus_xy) where:
   bus_coords — DataFrame with Bus_ID, lat, lng
   bus_xy    — Dict{Int => (x,y)} in Web Mercator
 """
-function build_geo_context(network_name::String, title::String="")
+function build_geo_context(network_name::String, title::String="";
+                           case_file=nothing, bus_coords_src=nothing)
     config = network_plot_config(network_name)
     shapes = load_us_basemap(config.states)
 
     # Load network topology and bus coordinates first so we can compute extents
     # before creating the plot (avoids xlims!/ylims! mutation which resets top_margin)
-    network_data = load_network(network_name)
+    network_data = case_file === nothing ? load_network(network_name) :
+                                           load_case_file(case_file)
     ref = PowerIO.build_ref(network_data)
 
-    bus_coords = load_bus_coordinates(network_name)
+    bus_coords = resolve_bus_coordinates(Dict{Symbol,Any}(
+        :bus_coords => bus_coords_src,
+        :case_file  => case_file,
+        :network    => network_name,
+    ))
 
     # Build Web Mercator lookup
     bus_xy = Dict{Int,Tuple{Float64,Float64}}()

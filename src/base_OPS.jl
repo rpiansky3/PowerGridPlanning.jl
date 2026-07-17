@@ -196,7 +196,9 @@ function extract_results(model::JuMP.Model, preprocessed::Dict, opt_parameters::
         :T => T,
         :times => preprocessed[:times_array],
         :network => opt_parameters[:network],
-        :data_dir => get(opt_parameters, :data_dir, "data")
+        :data_dir => get(opt_parameters, :data_dir, "data"),
+        :case_file => get(opt_parameters, :case_file, nothing),
+        :bus_coords => get(opt_parameters, :bus_coords, nothing)
     )
 
     # Extract switching decisions

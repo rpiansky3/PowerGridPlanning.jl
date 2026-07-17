@@ -104,7 +104,8 @@ end
 Solve an Optimal Transmission Switching problem with wildfire risk considerations.
 
 # Required Parameters
-- `:network` => String - Network name (e.g., "RTS", "CATS", "Texas7k", "Texas2k", "WECC240")
+- `:network` => String - Network name (e.g., "RTS", "CATS", "Texas7k", "Texas2k", "WECC240").
+    Optional when `:case_file` is given (defaults to the case file's basename, used as a label).
 - `:model` => String - "DCOTS", "LACOTS", "DCOPF", or "LACOPF"
     - DCOTS/LACOTS: wildfire-aware optimal transmission switching
     - DCOPF/LACOPF: pure OPF (no wildfire risk, no line de-energization). Investment options
@@ -114,6 +115,23 @@ Solve an Optimal Transmission Switching problem with wildfire risk consideration
     - Array of tuples: [(year, month, day), ...]
     - Year string: "2020"
     - Month string: "June 2021"
+
+# User-Supplied Networks
+- `:case_file` => String - Path to any MATPOWER `.m` case (absolute or relative to the
+    current directory). Bypasses the named-network lookup. Loads default to the case's
+    Pd/Qd scaled by the built-in synthetic hourly profile. A bare case has no geographic
+    data, so features that correlate the grid with geodata degrade explicitly:
+    - DCOTS/LACOTS require `:risk_per_line` (USGS FPI auto-load is unavailable);
+      DCOPF/LACOPF work out of the box.
+    - Plotting (`:plots`) and hardening require `:bus_coords` (hardening alternatively
+      accepts `:line_lengths`); both error up front if missing.
+    - Solar siting works without geodata via the flat `:solar_capacity_factor_default`,
+      or supply per-bus profiles via `:solar_data_path`.
+- `:bus_coords` => String or DataFrame - Bus coordinates with columns Bus_ID, lat, lng
+    (common aliases like bus_id/latitude/lon accepted). Also overrides the bundled
+    coordinates for named networks.
+- `:line_lengths` => Dict{Int,Float64} - Per-line lengths in miles for hardening costs;
+    alternative to `:bus_coords`. Lines not listed get length 0 (with a warning).
 
 # Optional Parameters
 - `:switching_method` => String - Solution method: "optimal" (default) or "thresholded"
@@ -169,6 +187,12 @@ end
 Validate that all required parameters are present and have valid values.
 """
 function validate_parameters!(opt_parameters::Dict)
+    # User-supplied case file: validate up front so geography-dependent features
+    # fail fast with actionable errors instead of failing after preprocessing
+    if get(opt_parameters, :case_file, nothing) !== nothing
+        validate_custom_network_parameters!(opt_parameters)
+    end
+
     # wildfire_data is now optional - it will be auto-loaded from data/USGS_FPI
     required_keys = [:network, :model, :objective, :times]
 
@@ -246,6 +270,60 @@ function validate_parameters!(opt_parameters::Dict)
 end
 
 """
+    validate_custom_network_parameters!(opt_parameters::Dict)
+
+Validate the user-supplied network path (`:case_file`). A bare MATPOWER case
+carries no geographic data, so every feature that correlates the network with
+external geodata (USGS FPI auto-load, plotting, hardening line lengths) must
+either receive that data explicitly or be rejected here — before any solve time
+is spent.
+"""
+function validate_custom_network_parameters!(opt_parameters::Dict)
+    case_file = opt_parameters[:case_file]
+    if !(case_file isa AbstractString)
+        error("case_file must be a path String, got $(typeof(case_file))")
+    end
+    if !isfile(case_file)
+        error("Network case file not found: $case_file")
+    end
+
+    # Default the network label from the file name; used in results/outputs only
+    if !haskey(opt_parameters, :network)
+        opt_parameters[:network] = first(splitext(basename(case_file)))
+    end
+
+    # Wildfire-aware models need per-line risk, which is auto-loaded from
+    # geographically correlated USGS FPI files for named networks only
+    model = get(opt_parameters, :model, "")
+    has_user_risk = get(opt_parameters, :risk_per_line, nothing) !== nothing ||
+                    get(opt_parameters, :wildfire_data, nothing) !== nothing
+    if model in ("DCOTS", "LACOTS") && !has_user_risk
+        error("Model '$model' on a user-supplied case file requires per-line risk data: " *
+              "USGS FPI auto-loading is only available for the pre-configured networks. " *
+              "Pass :risk_per_line => Dict(day => Dict(line_id => risk)), or use " *
+              "scripts/fetch_wfpi_data.jl with bus coordinates to generate a risk file. " *
+              "For a pure power flow without risk, use model 'DCOPF' or 'LACOPF'.")
+    end
+
+    # Plotting draws the network geographically
+    plots_val = get(opt_parameters, :plots, false)
+    if !(plots_val == false || plots_val == "none") &&
+       get(opt_parameters, :bus_coords, nothing) === nothing
+        error("Plotting a user-supplied case file requires :bus_coords " *
+              "(CSV path or DataFrame with Bus_ID, lat, lng columns).")
+    end
+
+    # Hardening costs are per-mile; without lengths every line would harden for free
+    if get(opt_parameters, :hardening_enabled, false) &&
+       get(opt_parameters, :bus_coords, nothing) === nothing &&
+       get(opt_parameters, :line_lengths, nothing) === nothing
+        error("Hardening on a user-supplied case file requires geographic data. " *
+              "Provide :bus_coords (CSV path or DataFrame with Bus_ID, lat, lng) " *
+              "or :line_lengths (Dict of line_id => miles).")
+    end
+end
+
+"""
     set_defaults!(opt_parameters::Dict)
 
 Set default values for optional parameters.
@@ -270,7 +348,10 @@ function set_defaults!(opt_parameters::Dict)
         :log_str => "",               # If provided, save Gurobi log to file at this path
         :plots => false,              # false/"none"/"all"/"inv_only"/"timeseries_only"
         :plot_dir => "",              # "" = current dir, or a path string
-        :data_dir => "data"           # Root data directory; use "test_data" for the reference subset
+        :data_dir => "data",          # Root data directory; use "test_data" for the reference subset
+        :case_file => nothing,        # Path to a user-supplied MATPOWER case (bypasses named lookup)
+        :bus_coords => nothing,       # CSV path or DataFrame (Bus_ID, lat, lng); required by geography features on custom cases
+        :line_lengths => nothing      # Dict(line_id => miles); alternative to :bus_coords for hardening
     )
 
     for (key, value) in defaults

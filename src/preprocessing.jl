@@ -47,12 +47,21 @@ function preprocess(opt_parameters::Dict)
     # Resolve data directory (default: "data"; use "test_data" for reference subset)
     data_dir = get(opt_parameters, :data_dir, "data")
 
-    # Load network data
+    # Load network data: user-supplied case file takes precedence over named lookup
     network_name = opt_parameters[:network]
-    network_data = load_network(network_name, data_dir)
+    case_file = get(opt_parameters, :case_file, nothing)
+    if case_file !== nothing
+        network_data = load_case_file(case_file)
+        # CATS time-series wiring is tied to the bundled network's data files;
+        # never trigger it from a user-supplied case, whatever its label.
+        is_cats = false
+        println("✓ Loaded user-supplied case file: $case_file (label: $network_name)")
+    else
+        network_data = load_network(network_name, data_dir)
 
-    # Detect if CATS network
-    is_cats = occursin("California", network_name) || occursin("CATS", network_name)
+        # Detect if CATS network
+        is_cats = occursin("California", network_name) || occursin("CATS", network_name)
+    end
 
     # Build reference dictionary
     ref = PowerIO.build_ref(network_data)
@@ -123,6 +132,14 @@ function preprocess(opt_parameters::Dict)
         validate_risk_per_line(opt_parameters[:wildfire_data], D)
         preprocessed[:wildfire_data_loaded] = false
         println("✓ Using user-provided wildfire_data (legacy parameter)")
+    elseif case_file !== nothing
+        # Defensive: validate_parameters! rejects this combination up front.
+        # Auto-loading USGS FPI risk requires the geographic correlation done for
+        # the pre-configured networks; a bare case file has no coordinates to map.
+        error("Cannot auto-load wildfire risk for a user-supplied case file. " *
+              "Provide per-line risk via :risk_per_line, or use a pre-configured " *
+              "network name. To build a risk file for your own network, see " *
+              "scripts/fetch_wfpi_data.jl (requires bus coordinates).")
     else
         # Auto-load from files
         risk_metric = get(opt_parameters, :risk_metric, "cum_wfpi")
@@ -140,15 +157,36 @@ function preprocess(opt_parameters::Dict)
         opt_parameters[:hardenable_lines] = hardenable_lines
         preprocessed[:hardenable_lines] = hardenable_lines
 
-        # Load bus coordinates
-        bus_data = load_bus_coordinates(network_name, data_dir)
+        # Resolve line lengths: explicit :line_lengths override, else computed
+        # from bus coordinates (:bus_coords override, else named-network lookup)
+        user_lengths = get(opt_parameters, :line_lengths, nothing)
+        if user_lengths !== nothing
+            line_lengths = Dict{Int,Float64}(Int(l) => Float64(len) for (l, len) in user_lengths)
+            missing_lines = [l for l in keys(ref[:branch]) if !haskey(line_lengths, l)]
+            if !isempty(missing_lines)
+                @warn "$(length(missing_lines)) line(s) missing from :line_lengths. Setting their length to 0."
+                for l in missing_lines
+                    line_lengths[l] = 0.0
+                end
+            end
+            println("✓ Using user-provided line lengths for $(length(user_lengths)) lines")
+        else
+            bus_data = resolve_bus_coordinates(opt_parameters)
 
-        if isempty(bus_data)
-            @warn "No bus coordinate data available. Line lengths will be set to 0."
+            if isempty(bus_data)
+                if case_file !== nothing
+                    # Zero-length lines would make hardening free — refuse rather
+                    # than silently produce a meaningless hardening plan.
+                    error("Hardening on a user-supplied case file requires geographic data. " *
+                          "Provide :bus_coords (CSV path or DataFrame with Bus_ID, lat, lng) " *
+                          "or :line_lengths (Dict of line_id => miles).")
+                end
+                @warn "No bus coordinate data available. Line lengths will be set to 0."
+            end
+
+            # Calculate line lengths
+            line_lengths = calculate_line_lengths(ref, bus_data)
         end
-
-        # Calculate line lengths
-        line_lengths = calculate_line_lengths(ref, bus_data)
         preprocessed[:line_lengths] = line_lengths
 
         # Report statistics
@@ -371,6 +409,80 @@ function load_network(network_name::String, data_dir::String="data")
 
     network = PowerIO.parse_file(network_file)
     return PowerIO.to_powermodels(network)
+end
+
+"""
+    load_case_file(case_file::String) -> Dict
+
+Load a user-supplied MATPOWER case from an arbitrary path (absolute or relative
+to the current directory), bypassing the named-network lookup in `load_network`.
+"""
+function load_case_file(case_file::String)
+    if !isfile(case_file)
+        error("Network case file not found: $case_file")
+    end
+    network = PowerIO.parse_file(case_file)
+    return PowerIO.to_powermodels(network)
+end
+
+"""
+    normalize_bus_coords!(df::DataFrame) -> DataFrame
+
+Normalize a user-supplied bus coordinate table to the canonical column names
+`Bus_ID`, `lat`, `lng`, accepting common aliases (bus_id/bus, latitude,
+lon/long/longitude). Errors if a required column cannot be found.
+"""
+function normalize_bus_coords!(df::DataFrame)
+    canonical = Dict(
+        "bus_id" => "Bus_ID", "bus" => "Bus_ID", "busid" => "Bus_ID",
+        "lat" => "lat", "latitude" => "lat",
+        "lng" => "lng", "lon" => "lng", "long" => "lng", "longitude" => "lng",
+    )
+    for n in names(df)
+        target = get(canonical, lowercase(n), nothing)
+        (target === nothing || n == target) && continue
+        target in names(df) || rename!(df, n => target)
+    end
+
+    missing_cols = [c for c in ("Bus_ID", "lat", "lng") if !(c in names(df))]
+    if !isempty(missing_cols)
+        error("bus_coords is missing required column(s): $(join(missing_cols, ", ")). " *
+              "Expected Bus_ID, lat, lng (aliases like bus_id/latitude/lon are accepted). " *
+              "Got columns: $(join(names(df), ", "))")
+    end
+    return df
+end
+
+"""
+    resolve_bus_coordinates(opt_parameters::Dict) -> DataFrame
+
+Return bus coordinates as a DataFrame with columns Bus_ID, lat, lng.
+
+Priority:
+1. `:bus_coords` parameter — a DataFrame or a CSV file path (works for both
+   user-supplied case files and named networks, overriding the bundled CSV).
+2. Named-network lookup via `load_bus_coordinates`.
+3. User-supplied case file with no `:bus_coords` — empty DataFrame; callers
+   decide whether that degrades (plots skipped) or errors (hardening).
+"""
+function resolve_bus_coordinates(opt_parameters::Dict)
+    bc = get(opt_parameters, :bus_coords, nothing)
+    if bc !== nothing
+        if bc isa DataFrame
+            return normalize_bus_coords!(copy(bc))
+        elseif bc isa AbstractString
+            isfile(bc) || error("bus_coords file not found: $bc")
+            return normalize_bus_coords!(CSV.read(bc, DataFrame))
+        else
+            error("bus_coords must be a DataFrame or a CSV path String, got $(typeof(bc))")
+        end
+    end
+
+    if get(opt_parameters, :case_file, nothing) !== nothing
+        return DataFrame(Bus_ID=Int[], lat=Float64[], lng=Float64[])
+    end
+
+    return load_bus_coordinates(opt_parameters[:network], get(opt_parameters, :data_dir, "data"))
 end
 
 """
