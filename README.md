@@ -65,7 +65,7 @@ println("Risk reduction: $(results[:risk_reduction_pct])%")
 println("Lines switched off: $(length(results[:switched_off_lines][1]))")
 ```
 
-A Jupyter notebook walkthrough covering the full API is included at [`tutorial.ipynb`](tutorial.ipynb).
+A full walkthrough is available as an [executed tutorial in the docs](https://rpiansky3.github.io/PowerGridPlanning.jl/stable/tutorial/) and as a Jupyter notebook at [`tutorial.ipynb`](tutorial.ipynb). Both are generated from the same source (`docs/lit/tutorial.jl`), so they never drift apart — edit the Literate source, not the notebook.
 
 ## Testing
 

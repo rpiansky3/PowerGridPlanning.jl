@@ -32,6 +32,21 @@ julia --project=. -e 'using Pkg; Pkg.instantiate()'
 
 The `test/runtests.jl` suite runs without Gurobi (skips solver-dependent tests). The full suite in `test/runtests_full.jl` requires a valid Gurobi license.
 
+## Documentation and tutorial
+
+Docs live in `docs/` and build with Documenter:
+
+```bash
+julia --project=docs -e 'using Pkg; Pkg.instantiate()'
+julia --project=docs docs/make.jl
+```
+
+The tutorial docs page and the repository-root `tutorial.ipynb` are **both
+generated** from the single Literate.jl source `docs/lit/tutorial.jl` — edit that
+file, never `tutorial.ipynb` or `docs/src/tutorial.md` directly. The docs build
+executes the tutorial against `test_data/` with HiGHS and regenerates the
+notebook; commit the regenerated `tutorial.ipynb` when the source changes.
+
 ## Notes
 
 - Match the style of existing Julia code in `src/`.
