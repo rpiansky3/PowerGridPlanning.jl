@@ -126,6 +126,7 @@ Solve an Optimal Transmission Switching problem with wildfire risk consideration
 - `:voll` => Float64 - Value of Lost Load in USD/MWh for "cost" objective (default: 10000.0)
 - `:warm_start` => Dict or String - For LACOTS: warm start values or "auto" to run DCOTS first
 - `:non_linear` => Bool - For LACOTS: use non-linear apparent power constraints (default: false)
+- `:optimizer` - JuMP optimizer constructor, e.g. `HiGHS.Optimizer` (default: `Gurobi.Optimizer`)
 - `:time_limit` => Float64 - Solver time limit in seconds (default: 86400.0)
 - `:mip_gap` => Float64 - MIP optimality gap (default: 0.01)
 - `:output_format` => String - "dict", "jld2", or "txt" (default: "dict")
@@ -258,6 +259,7 @@ function set_defaults!(opt_parameters::Dict)
         :voll => 10000.0,
         :warm_start => nothing,
         :non_linear => false,
+        :optimizer => nothing,        # JuMP optimizer constructor; nothing = Gurobi.Optimizer
         :time_limit => 86400.0,
         :mip_gap => 0.01,
         :output_format => "dict",

@@ -30,7 +30,7 @@ Full documentation lives at **[rpiansky3.github.io/PowerGridPlanning.jl](https:/
 
 ## Installation
 
-Requires Julia 1.10+ and a [Gurobi license](https://www.gurobi.com/academia/academic-program-and-licenses/) for planning solves (Ipopt, included, handles AC verification).
+Requires Julia 1.10+. Planning solves default to Gurobi ([academic licenses available](https://www.gurobi.com/academia/academic-program-and-licenses/)), but any JuMP-compatible MIP solver can be supplied via the `:optimizer` parameter — e.g. the open-source [HiGHS](https://github.com/jump-dev/HiGHS.jl) (`:optimizer => HiGHS.Optimizer`). Ipopt, included, handles AC verification.
 
 ```julia
 using Pkg

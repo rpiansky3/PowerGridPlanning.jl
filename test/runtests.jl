@@ -1,12 +1,14 @@
 # test/runtests.jl
 # CI test suite — no Gurobi license required.
-# Run via: julia --project=. test/runtests.jl  OR  Pkg.test()
+# Run via: Pkg.test()  OR  julia --project=. test/runtests.jl
 #
-# These tests exercise only pre-solver code paths:
+# These tests cover:
 #   - Package loading (Gurobi_jll supplies runtime; license only needed for optimize!)
 #   - test_data/ file existence
 #   - CSV column structure
 #   - Parameter validation errors (thrown before build_and_solve_model)
+#   - Small RTS solves via the open-source HiGHS solver (Pkg.test() only)
+#   - Census tract→bus assignment and aggregation invariants
 #
 # Full test suite (requires Gurobi license): julia --project=. test/runtests_full.jl
 
@@ -290,6 +292,54 @@ end
         @test occursin("1 => 1", txt)
         @test occursin("[islanded_buses - Islanded Buses by Day]", txt)
         @test occursin("1 => [3]", txt)
+    end
+end
+
+# ── 11. Optimization core with an open-source solver ─────────────────────────
+# Solves small RTS cases with HiGHS so CI exercises the model-building and
+# solve path (variables/constraints/objective/extraction) without a Gurobi
+# license. HiGHS is a test-target dependency: available under Pkg.test(), and
+# skipped gracefully for direct `julia --project=. test/runtests.jl` runs in
+# environments without it.
+const HIGHS_AVAILABLE = Base.find_package("HiGHS") !== nothing
+HIGHS_AVAILABLE && @eval using HiGHS
+
+@testset "Optimization core (HiGHS)" begin
+    if !HIGHS_AVAILABLE
+        @info "Skipping HiGHS solve tests — HiGHS not installed (run via Pkg.test() to include it)"
+    else
+        base = Dict(
+            :network    => "RTS",
+            :objective  => "loadshed",
+            :times      => [(2020, 6, 15)],
+            :T          => 4,
+            :data_dir   => "test_data",
+            :optimizer  => HiGHS.Optimizer,
+            :time_limit => 300.0,
+        )
+
+        # DCOTS: MIP with binary switching variables
+        r_ots = solve_ots(merge(base, Dict{Symbol,Any}(:model => "DCOTS")))
+        @test r_ots[:status] in (MOI.OPTIMAL, MOI.TIME_LIMIT)
+        @test r_ots[:total_load_shed] >= -1e-6
+        @test haskey(r_ots, :z) && !isempty(r_ots[:z])
+        @test haskey(r_ots, :switched_off_lines)
+        @test 0.0 <= r_ots[:risk_reduction_pct] <= 100.0
+
+        # DCOPF: pure power-flow LP baseline (no switching variables)
+        r_opf = solve_ots(merge(base, Dict{Symbol,Any}(:model => "DCOPF")))
+        @test r_opf[:status] in (MOI.OPTIMAL, MOI.TIME_LIMIT)
+        @test r_opf[:total_load_shed] >= -1e-6
+        @test isempty(r_opf[:switched_off_lines][1])
+
+        # Thresholded switching: statuses pre-computed, LP solve
+        r_thr = solve_ots(merge(base, Dict{Symbol,Any}(
+            :model => "DCOTS",
+            :switching_method => "thresholded",
+            :threshold_pct => 0.75,
+        )))
+        @test r_thr[:status] in (MOI.OPTIMAL, MOI.TIME_LIMIT)
+        @test r_thr[:risk_reduction_pct] >= 25.0 - 1e-6
     end
 end
 

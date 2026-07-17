@@ -100,26 +100,41 @@ function build_and_solve_model(opt_parameters::Dict, preprocessed::Dict)
         opt_parameters[:z_fixed] = z_fixed
     end
 
-    # Initialize optimization model
-    model = Model(Gurobi.Optimizer)
+    # Initialize optimization model with the configured solver (default: Gurobi)
+    optimizer = opt_parameters[:optimizer] === nothing ? Gurobi.Optimizer : opt_parameters[:optimizer]
+    model = Model(optimizer)
+    is_gurobi = solver_name(model) == "Gurobi"
 
-    # Set solver parameters
-    set_optimizer_attribute(model, "Seed", 1)
-    set_optimizer_attribute(model, "MIPGap", mip_gap)
-    MOI.set(model, MOI.RawOptimizerAttribute("TimeLimit"), time_limit)
+    # Solver-agnostic parameters
+    try
+        MOI.set(model, MOI.RelativeGapTolerance(), mip_gap)
+    catch
+        @warn "Solver $(solver_name(model)) does not support a relative MIP gap; ignoring :mip_gap"
+    end
+    try
+        MOI.set(model, MOI.TimeLimitSec(), time_limit)
+    catch
+        @warn "Solver $(solver_name(model)) does not support a time limit; ignoring :time_limit"
+    end
     set_optimizer_attribute(model, MOI.Silent(), false)
 
-    # Set log file if requested
     log_str = opt_parameters[:log_str]
-    if !isempty(log_str)
-        set_optimizer_attribute(model, "LogFile", log_str)
-        println("Gurobi log will be written to: $log_str")
-    end
+    if is_gurobi
+        set_optimizer_attribute(model, "Seed", 1)
 
-    # Additional parameters for numerical stability (especially for larger networks)
-    if preprocessed[:is_cats] || preprocessed[:D] > 1
-        set_optimizer_attribute(model, "MIPFocus", 2)
-        set_optimizer_attribute(model, "Method", 2)  # Barrier method
+        # Set log file if requested
+        if !isempty(log_str)
+            set_optimizer_attribute(model, "LogFile", log_str)
+            println("Gurobi log will be written to: $log_str")
+        end
+
+        # Additional parameters for numerical stability (especially for larger networks)
+        if preprocessed[:is_cats] || preprocessed[:D] > 1
+            set_optimizer_attribute(model, "MIPFocus", 2)
+            set_optimizer_attribute(model, "Method", 2)  # Barrier method
+        end
+    elseif !isempty(log_str)
+        @warn "Solver log capture (:log_str) is only supported with Gurobi; ignoring"
     end
 
     # Add variables

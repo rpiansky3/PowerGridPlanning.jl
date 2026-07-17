@@ -53,6 +53,10 @@ opt_parameters = Dict(
 :non_linear => false              # Use non-linear apparent power constraints
 
 # Solver parameters
+:optimizer => nothing             # JuMP optimizer constructor (default: Gurobi.Optimizer)
+                                  # Any JuMP-compatible MIP solver works, e.g. HiGHS.Optimizer
+                                  # (open source, no license). Gurobi-specific tuning
+                                  # (:log_str, MIPFocus/Method) applies only with Gurobi.
 :time_limit => 86400.0            # Solver time limit (seconds, default: 24 hours)
 :mip_gap => 0.01                  # MIP optimality gap (default: 1%)
 

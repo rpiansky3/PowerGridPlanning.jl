@@ -28,9 +28,10 @@ ArgParse = "1"
 CSV = "0.10"
 DBFTables = "1"
 DataFrames = "1"
-GeoInterface = "1"
+GeoInterface = "1.6.1"
 Gurobi = "1"
 HTTP = "1, 2"
+HiGHS = "1"
 Ipopt = "1.15.0"
 JLD2 = "0.4, 0.5, 0.6"
 JSON = "0.21, 1"
@@ -41,7 +42,8 @@ Shapefile = "0.13"
 julia = "1.10"
 
 [extras]
+HiGHS = "87dc4568-4c63-4d18-b0c0-bb2238e4078b"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["Test", "HiGHS"]
