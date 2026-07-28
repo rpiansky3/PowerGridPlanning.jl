@@ -59,6 +59,8 @@ end
     @test haskey(ref, :bus) && !isempty(ref[:bus])
     @test haskey(ref, :branch) && !isempty(ref[:branch])
     @test haskey(ref, :ref_buses)
+    @test all(arc -> arc isa Tuple{Int,Int,Int}, ref[:arcs_from])
+    @test all(arc -> arc isa Tuple{Int,Int,Int}, ref[:arcs_to])
 
     branch = first(values(ref[:branch]))
     g, b = PowerGridPlanning.calc_branch_y(branch)

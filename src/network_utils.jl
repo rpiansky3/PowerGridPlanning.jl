@@ -41,8 +41,8 @@ function build_ref(network_data::Dict)
     end
 
     ref[:arcs] = Tuple{Int,Int,Int}[]
-    ref[:arcs_from] = Int[]
-    ref[:arcs_to] = Int[]
+    ref[:arcs_from] = Tuple{Int,Int,Int}[]
+    ref[:arcs_to] = Tuple{Int,Int,Int}[]
     ref[:bus_arcs] = Dict(bus => Tuple{Int,Int,Int}[] for bus in keys(ref[:bus]))
     for (branch_id, branch) in ref[:branch]
         f_bus = _ref_key(branch["f_bus"])
@@ -51,8 +51,8 @@ function build_ref(network_data::Dict)
         t_arc = (branch_id, t_bus, f_bus)
         push!(ref[:arcs], f_arc)
         push!(ref[:arcs], t_arc)
-        push!(ref[:arcs_from], branch_id)
-        push!(ref[:arcs_to], branch_id)
+        push!(ref[:arcs_from], f_arc)
+        push!(ref[:arcs_to], t_arc)
         push!(get!(ref[:bus_arcs], f_bus, Tuple{Int,Int,Int}[]), f_arc)
         push!(get!(ref[:bus_arcs], t_bus, Tuple{Int,Int,Int}[]), t_arc)
     end
