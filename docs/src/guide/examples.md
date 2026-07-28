@@ -15,7 +15,7 @@ opt_parameters = Dict(
     :time_limit => 300.0
 )
 
-results = solve_ots(opt_parameters)
+results = solve_opf(opt_parameters)
 
 # Access results
 println("Optimized in $(results[:solve_time]) seconds")
@@ -80,11 +80,15 @@ ac_results = verify_ac(Dict(
     :times    => [(2020, 6, 15)],
     :T        => 1,              # keep examples quick; default is 24
     :data_dir => "test_data",
+    :feedback_enabled => true,
+    :feedback_output_path => "ac_diagnostic_report.md",
 ), planning_results)
 
 println("AC feasible all hours: $(ac_results[:feasible_all])")
 println("AC failed hours: $(ac_results[:failed_hours])")
 println("AC active load shed: $(ac_results[:total_p_load_shed])")
+println("AC diagnostic counts: $(ac_results[:violation_summary][:count_by_type])")
+println("AC feedback hints: $(ac_results[:feedback_hints])")
 ```
 
 ## Example 3: Fast Thresholded Method

@@ -158,7 +158,7 @@ function network_plot_config(network_name::String)
 end
 
 """
-Translate solve_ots() results into plotting-internal format.
+Translate solve_ots()/solve_opf() results into plotting-internal format.
 
 day=nothing: aggregate across all days (sum/any as appropriate)
 day=d: use data for day d only
@@ -265,7 +265,7 @@ function load_plot_risk_data(results::Dict)
         if is_cats
             # CATS: use existing loader (already returns all lines in the CSV)
             network_data = load_network(network, data_dir)
-            ref = PowerIO.build_ref(network_data)
+            ref = build_ref(network_data)
             wf_data = load_wildfire_data(network, collect(times), ref, is_cats, risk_metric, data_dir)
             for (_, day_risks) in wf_data
                 for (l, r) in day_risks
@@ -276,7 +276,7 @@ function load_plot_risk_data(results::Dict)
             # Standard networks: use load_standard_wildfire_data (CSV first, JLD2 fallback)
             network_fpi_name = get_network_fpi_name(network)
             network_data = load_network(network, data_dir)
-            ref = PowerIO.build_ref(network_data)
+            ref = build_ref(network_data)
             wf_data = load_standard_wildfire_data(wf_dir, network_fpi_name, collect(times), ref, risk_metric)
             for (_, day_risks) in wf_data
                 for (l, r) in day_risks
@@ -309,7 +309,7 @@ function build_geo_context(network_name::String, title::String="";
     # before creating the plot (avoids xlims!/ylims! mutation which resets top_margin)
     network_data = case_file === nothing ? load_network(network_name, data_dir) :
                                            load_case_file(case_file)
-    ref = PowerIO.build_ref(network_data)
+    ref = build_ref(network_data)
 
     bus_coords = resolve_bus_coordinates(Dict{Symbol,Any}(
         :bus_coords => bus_coords_src,

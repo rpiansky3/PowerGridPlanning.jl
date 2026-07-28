@@ -25,8 +25,11 @@ const TEST_DATA    = joinpath(PROJECT_ROOT, "test_data")
 # ── 1. Package load ───────────────────────────────────────────────────────────
 @testset "Package loads" begin
     @test PowerGridPlanning.solve_ots isa Function
+    @test PowerGridPlanning.solve_opf isa Function
     @test PowerGridPlanning.plot_results isa Function
     @test PowerGridPlanning.verify_ac isa Function
+    @test PowerGridPlanning.solve_with_ac_feedback isa Function
+    @test PowerGridPlanning.write_ac_diagnostic_report isa Function
 end
 
 # ── 2. Network files ──────────────────────────────────────────────────────────
@@ -45,23 +48,22 @@ end
     end
 end
 
-# ── 2a. PowerIO reference helpers ────────────────────────────────────────────
-# PowerGridPlanning calls these qualified (PowerIO.build_ref etc.) — confirm the
-# installed PowerIO provides them and they behave sanely on a real network.
-@testset "PowerIO reference helpers" begin
+# ── 2a. Reference helpers ────────────────────────────────────────────────────
+# PowerGridPlanning owns the reference helpers used after PowerIO parsing.
+@testset "Reference helpers" begin
     path = joinpath(TEST_DATA, "networks", "pglib_opf_case240_pserc.m")
     network_data = PowerIO.to_powermodels(PowerIO.parse_file(path))
 
-    ref = PowerIO.build_ref(network_data)
+    ref = PowerGridPlanning.build_ref(network_data)
     @test ref isa Dict{Symbol,<:Any}
     @test haskey(ref, :bus) && !isempty(ref[:bus])
     @test haskey(ref, :branch) && !isempty(ref[:branch])
     @test haskey(ref, :ref_buses)
 
     branch = first(values(ref[:branch]))
-    g, b = PowerIO.calc_branch_y(branch)
+    g, b = PowerGridPlanning.calc_branch_y(branch)
     @test g isa Real && b isa Real
-    tr, ti = PowerIO.calc_branch_t(branch)
+    tr, ti = PowerGridPlanning.calc_branch_t(branch)
     @test tr isa Real && ti isa Real
 
     branch_data = Dict{String,Any}(
@@ -70,7 +72,7 @@ end
             "2" => Dict{String,Any}("angmin" => 0.0, "angmax" => 0.0),
         ),
     )
-    corrected = PowerIO.correct_voltage_angle_differences!(deepcopy(branch_data))
+    corrected = PowerGridPlanning.correct_voltage_angle_differences!(deepcopy(branch_data))
     @test corrected isa Dict
 end
 
@@ -159,6 +161,44 @@ end
     @test_throws ErrorException solve_ots(Dict(
         :network => "RTS", :model => "BADMODEL",
         :objective => "loadshed", :times => [(2020, 6, 15)]
+    ))
+
+    # solve_ots remains backward-compatible for legacy OPF calls, but warns
+    # and routes through solve_opf before rejecting OPF-incompatible objectives.
+    @test_warn r"delegating to solve_opf" begin
+        @test_throws ErrorException solve_ots(Dict(
+            :network => "RTS", :model => "DCOPF",
+            :objective => "wildfire", :times => [(2020, 6, 15)]
+        ))
+    end
+    @test_warn r"delegating to solve_opf" begin
+        @test_throws ErrorException solve_ots(Dict(
+            :network => "RTS", :model => "LACOPF",
+            :objective => "tradeoff", :times => [(2020, 6, 15)]
+        ))
+    end
+
+    @test_throws ErrorException solve_opf(Dict(
+        :network => "RTS", :model => "DCOTS",
+        :objective => "loadshed", :times => [(2020, 6, 15)]
+    ))
+    @test_throws ErrorException solve_opf(Dict(
+        :network => "RTS", :model => "LACOTS",
+        :objective => "loadshed", :times => [(2020, 6, 15)]
+    ))
+
+    @test_throws ErrorException solve_opf(Dict(
+        :network => "RTS", :model => "DCOPF",
+        :objective => "tradeoff", :times => [(2020, 6, 15)]
+    ))
+    @test_throws ErrorException solve_opf(Dict(
+        :network => "RTS", :model => "DCOPF", :objective => "loadshed",
+        :times => [(2020, 6, 15)], :switching_method => "thresholded",
+        :threshold => 1.0,
+    ))
+    @test_throws ErrorException solve_opf(Dict(
+        :network => "RTS", :model => "LACOPF", :objective => "loadshed",
+        :times => [(2020, 6, 15)], :threshold_pct => 0.8,
     ))
 
     # Invalid objective
@@ -261,6 +301,14 @@ end
     @test_throws ErrorException verify_ac(Dict(
         :network => "RTS", :mode => "BADMODE", :times => [(2020, 6, 15)]
     ))
+    @test_throws ErrorException PowerGridPlanning.validate_ac_parameters!(Dict(
+        :network => "RTS", :mode => "ACOPF", :times => [(2020, 6, 15)],
+        :diagnostics_tolerance => -1.0,
+    ))
+    @test_throws ErrorException PowerGridPlanning.validate_ac_parameters!(Dict(
+        :network => "RTS", :mode => "ACOPF", :times => [(2020, 6, 15)],
+        :feedback_mode => "rerun",
+    ))
 
     acpf = Dict(:network => "RTS", :mode => "ACPF",
                 :times => [(2020, 6, 15)], :T => 1, :data_dir => "test_data")
@@ -270,6 +318,8 @@ end
         p = copy(acpf)
         PowerGridPlanning.validate_ac_parameters!(p)
         PowerGridPlanning.set_ac_defaults!(p)
+        @test p[:diagnostics_enabled] == true
+        @test p[:feedback_enabled] == false
     end
     @test_nowarn begin
         p = copy(acopf)
@@ -298,6 +348,92 @@ end
     @test !any(startswith.(variable_names, "x"))
     @test !any(startswith.(variable_names, "s"))
     @test !any(startswith.(variable_names, "a"))
+
+    diag_ref = Dict{Symbol,Any}(
+        :bus => Dict(
+            1 => Dict("vmin" => 0.95, "vmax" => 1.05),
+            2 => Dict("vmin" => 0.95, "vmax" => 1.05),
+            3 => Dict("vmin" => 0.95, "vmax" => 1.05),
+        ),
+        :gen => Dict(1 => Dict("qmin" => -0.5, "qmax" => 0.5)),
+        :branch => Dict(
+            1 => Dict("f_bus" => 1, "t_bus" => 2, "rate_a" => 1.0,
+                      "angmin" => -0.2, "angmax" => 0.2),
+            2 => Dict("f_bus" => 2, "t_bus" => 3, "rate_a" => 1.0,
+                      "angmin" => -0.2, "angmax" => 0.2),
+        ),
+        :bus_gens => Dict(1 => [1], 2 => Int[], 3 => Int[]),
+        :bus_arcs => Dict(
+            1 => [(1, 1, 2)],
+            2 => [(1, 2, 1), (2, 2, 3)],
+            3 => [(2, 3, 2)],
+        ),
+        :ref_buses => Dict(1 => Dict()),
+    )
+    diag_ctx = Dict{Symbol,Any}(
+        :ref => diag_ref,
+        :d => 1,
+        :t => 1,
+        :bus_names => [1, 2, 3],
+        :branch_ids => [1, 2],
+        :gen_names => [1],
+        :branch_status => Dict(1 => 1, 2 => 0),
+        :pd => Dict(1 => 0.0, 2 => 0.0, 3 => 0.4),
+        :qd => Dict(1 => 0.0, 2 => 0.0, 3 => 0.1),
+        :planning_results => Dict{Symbol,Any}(:z => Dict((1, 2) => 0.0)),
+    )
+    diag_params = copy(acopf)
+    PowerGridPlanning.set_ac_defaults!(diag_params)
+
+    hour_result = Dict{Symbol,Any}(
+        :status => MOI.OPTIMAL,
+        :feasible => true,
+        :vm => Dict(1 => 0.94, 2 => 1.0, 3 => 1.0),
+        :va => Dict(1 => 0.3, 2 => 0.0, 3 => 0.0),
+        :p => Dict((1, 1, 2) => 1.2, (1, 2, 1) => 0.0),
+        :q => Dict((1, 1, 2) => 0.0, (1, 2, 1) => 0.0),
+        :qg => Dict(1 => 0.5),
+        :p_load_shed => Dict(1 => 0.0, 2 => 0.0, 3 => 0.1),
+        :q_load_shed => Dict(1 => 0.0, 2 => 0.0, 3 => 0.0),
+    )
+
+    @test length(PowerGridPlanning._voltage_violations(diag_ctx, hour_result, diag_params)) == 1
+    @test length(PowerGridPlanning._thermal_violations(diag_ctx, hour_result, diag_params)) == 1
+    @test length(PowerGridPlanning._angle_violations(diag_ctx, hour_result, diag_params)) == 1
+    @test length(PowerGridPlanning._load_shed_violations(diag_ctx, hour_result, diag_params)) == 1
+    @test length(PowerGridPlanning._binding_generator_q_limits(diag_ctx, hour_result, diag_params)) == 1
+    @test first(PowerGridPlanning._islanding_violations(diag_ctx, diag_params))[:type] == :islanding
+    @test sort(PowerGridPlanning._energized_components(diag_ctx), by=first) == [[1, 2], [3]]
+
+    diag = Dict{Symbol,Any}(
+        :hour => (1, 1),
+        :violations => vcat(
+            PowerGridPlanning._voltage_violations(diag_ctx, hour_result, diag_params),
+            PowerGridPlanning._thermal_violations(diag_ctx, hour_result, diag_params),
+            PowerGridPlanning._islanding_violations(diag_ctx, diag_params),
+        ),
+        :binding => PowerGridPlanning._binding_generator_q_limits(diag_ctx, hour_result, diag_params),
+    )
+    diag_results = Dict{Symbol,Any}(
+        :network => "RTS",
+        :mode => "ACOPF",
+        :feasible_all => false,
+        :failed_hours => [(1, 1)],
+    )
+    PowerGridPlanning._accumulate_ac_diagnostics!(diag_results, diag, diag_params)
+    @test diag_results[:violation_summary][:count_by_type][:voltage_low] == 1
+    @test haskey(diag_results[:binding_elements], (1, 1))
+    diag_results[:feedback_hints] =
+        PowerGridPlanning._build_ac_feedback_hints(diag_results, diag_ctx[:planning_results], diag_params)
+    @test any(h -> h[:type] == :connectivity, diag_results[:feedback_hints])
+
+    mktempdir() do dir
+        report_path = joinpath(dir, "nested", "ac_report.md")
+        PowerGridPlanning.write_ac_diagnostic_report(diag_results, report_path)
+        report = read(report_path, String)
+        @test occursin("# AC Feasibility Diagnostic Report", report)
+        @test occursin("`islanding`", report)
+    end
 end
 
 # ── 10. Result saving ────────────────────────────────────────────────────────
@@ -450,7 +586,7 @@ end
         @test r_opf[:total_load_shed] >= -1e-6
 
         # DCOTS with user-supplied per-line risk (line IDs from the parsed case)
-        ref = PowerIO.build_ref(PowerIO.to_powermodels(PowerIO.parse_file(rts_case)))
+        ref = PowerGridPlanning.build_ref(PowerIO.to_powermodels(PowerIO.parse_file(rts_case)))
         risky = sort(collect(keys(ref[:branch])))[1:3]
         risk = Dict(1 => Dict(l => 10.0 for l in risky))
         r_ots = solve_ots(merge(base, Dict{Symbol,Any}(

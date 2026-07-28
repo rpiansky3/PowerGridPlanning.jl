@@ -63,10 +63,10 @@ end
 """
     plot_results(results, features; format="pdf", output_dir=".", plot_dir="", day=nothing, infrastructure_off=false, ls_off=false, kwargs...)
 
-Generate publication-quality plots from solve_ots() results.
+Generate publication-quality plots from solve_ots() or solve_opf() results.
 
 # Arguments
-- `results`: Dict from solve_ots(), String path to .jld2 file, or Vector{Dict} for :tradeoff_curve
+- `results`: Dict from solve_ots()/solve_opf(), String path to .jld2 file, or Vector{Dict} for :tradeoff_curve
 - `features`: Vector of Symbols — which plots to generate (see documentation for full list)
 - `format`: Output format — "png", "pdf", "svg", "eps" (default: "pdf")
 - `output_dir`: Directory to save output files (default: current directory)

@@ -8,7 +8,10 @@ Docstrings for the exported PowerGridPlanning API. See the
 
 ```@docs
 solve_ots
+solve_opf
 verify_ac
+solve_with_ac_feedback
+write_ac_diagnostic_report
 ```
 
 ## Plotting

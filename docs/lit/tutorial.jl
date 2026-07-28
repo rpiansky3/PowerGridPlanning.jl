@@ -81,19 +81,18 @@ first(rts_risk, 5)
 #
 # We solve three variants and compare them side by side:
 #
-# | Run | Model | Objective | Switching | What it represents |
-# |-----|-------|-----------|-----------|--------------------|
-# | A | DCOPF | `loadshed` | disabled | True no-action baseline |
-# | B | DCOTS | `loadshed` | thresholded | Fast heuristic: pre-remove riskiest lines |
-# | C | DCOTS | `tradeoff` | optimal | Full MIP: co-optimize shed and risk |
+# | Run | Model | Entry point | Objective | Switching | What it represents |
+# |-----|-------|-------------|-----------|-----------|--------------------|
+# | A | DCOPF | `solve_opf` | `loadshed` | disabled | True no-action baseline |
+# | B | DCOTS | `solve_ots` | `loadshed` | thresholded | Fast heuristic: pre-remove riskiest lines |
+# | C | DCOTS | `solve_ots` | `tradeoff` | optimal | Full MIP: co-optimize shed and risk |
 #
 # ### 3a. Baseline DCOPF (no switching)
 #
-# `DCOPF` is a pure power-flow model: no switching variables and no wildfire
-# risk enter the mathematical model at all — the package builds the *minimal*
-# formulation for each problem.
+# `DCOPF` is a pure power-flow model. Use `solve_opf` for OPF baselines: no
+# switching variables and no wildfire risk enter the mathematical model at all.
 
-results_base = solve_ots(merge(SETTINGS, Dict(
+results_base = solve_opf(merge(SETTINGS, Dict(
     :network   => "RTS",
     :model     => "DCOPF",
     :objective => "loadshed",
@@ -374,7 +373,11 @@ println("LACOTS load shed: ", round(results_lac[:total_load_shed], digits=2), " 
 #
 # `verify_ac` replays fixed planning decisions in a full nonlinear AC model
 # (via Ipopt): `"ACPF"` checks strict feasibility, `"ACOPF"` runs recovery
-# redispatch with load shedding.
+# redispatch with load shedding. Diagnostics are enabled by default and report
+# solver failures, voltage violations, thermal overloads, angle-limit
+# violations, recovery load shedding, reactive limit binding, and islanding.
+
+mkpath("tutorial_output")
 
 ac = verify_ac(Dict(
     :network  => "RTS",
@@ -382,10 +385,14 @@ ac = verify_ac(Dict(
     :times    => [(2020, 6, 15)],
     :T        => 1,                  # one hour keeps the tutorial fast
     :data_dir => "test_data",
+    :feedback_enabled => true,
+    :feedback_output_path => "tutorial_output/ac_diagnostic_report.md",
 ), results_thresh);
 
 println("AC-feasible in all hours: ", ac[:feasible_all])
 println("AC load shed: ", round(ac[:total_load_shed], digits=3))
+println("Diagnostic counts: ", ac[:violation_summary][:count_by_type])
+println("Diagnostic report: ", get(ac, :diagnostic_report_path, "none"))
 
 # ### 5g. Custom wildfire risk data
 #

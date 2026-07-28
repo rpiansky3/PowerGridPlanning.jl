@@ -12,7 +12,7 @@ This also sets rate_a for branches that have none in the network file.
 """
 function tighten_branch_limits!(ref::Dict)
     for (l, branch) in ref[:branch]
-        _, b = PowerIO.calc_branch_y(branch)
+        _, b = calc_branch_y(branch)
         ang_bound = max(abs(get(branch, "angmin", -π)), abs(get(branch, "angmax", π)))
         btheta_bound = abs(b) * ang_bound
         current_rate_a = get(branch, "rate_a", Inf)
@@ -64,7 +64,7 @@ function preprocess(opt_parameters::Dict)
     end
 
     # Build reference dictionary
-    ref = PowerIO.build_ref(network_data)
+    ref = build_ref(network_data)
     tighten_branch_limits!(ref)
 
     # Prepare data structure
@@ -102,7 +102,7 @@ function preprocess(opt_parameters::Dict)
                 update_cats_network!(network_copy, hour_of_year, cats_data, preprocessed[:load_mapping])
 
                 # Build reference for this hour
-                preprocessed[:hourly_refs][d][t] = PowerIO.build_ref(network_copy)
+                preprocessed[:hourly_refs][d][t] = build_ref(network_copy)
                 tighten_branch_limits!(preprocessed[:hourly_refs][d][t])
             end
         end

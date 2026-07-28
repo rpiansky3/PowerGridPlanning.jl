@@ -34,8 +34,8 @@ include("plotting_helpers.jl")
 include("plotting.jl")
 
 # Export main interface
-export solve_ots, load_txt, get_network_solar_data, get_network_census, plot_results,
-       load_census_data, verify_ac
+export solve_ots, solve_opf, load_txt, get_network_solar_data, get_network_census, plot_results,
+       load_census_data, verify_ac, solve_with_ac_feedback, write_ac_diagnostic_report
 
 """
     is_opf_only(model_type::AbstractString) -> Bool
@@ -101,16 +101,13 @@ end
 """
     solve_ots(opt_parameters::Dict)
 
-Solve an Optimal Transmission Switching problem with wildfire risk considerations.
+Solve a wildfire-aware Optimal Transmission Switching problem.
 
 # Required Parameters
 - `:network` => String - Network name (e.g., "RTS", "CATS", "Texas7k", "Texas2k", "WECC240").
     Optional when `:case_file` is given (defaults to the case file's basename, used as a label).
-- `:model` => String - "DCOTS", "LACOTS", "DCOPF", or "LACOPF"
-    - DCOTS/LACOTS: wildfire-aware optimal transmission switching
-    - DCOPF/LACOPF: pure OPF (no wildfire risk, no line de-energization). Investment options
-      (battery, solar, hardening) still apply. Allowed objectives: "loadshed" or "cost".
-- `:objective` => String - "loadshed", "wildfire", "cost", or "tradeoff" (DCOPF/LACOPF: "loadshed" or "cost" only)
+- `:model` => String - "DCOTS" or "LACOTS"
+- `:objective` => String - "loadshed", "wildfire", "cost", or "tradeoff"
 - `:times` => Array or String - Time specification:
     - Array of tuples: [(year, month, day), ...]
     - Year string: "2020"
@@ -157,6 +154,33 @@ Solve an Optimal Transmission Switching problem with wildfire risk consideration
 Results dictionary or writes to file based on output_format
 """
 function solve_ots(opt_parameters::Dict)
+    if haskey(opt_parameters, :model) && is_opf_only(opt_parameters[:model])
+        @warn "solve_ots called with OPF-only model $(opt_parameters[:model]); delegating to solve_opf. Prefer solve_opf for DCOPF/LACOPF."
+        return solve_opf(opt_parameters)
+    end
+    return _solve_linear_planning(opt_parameters, ("DCOTS", "LACOTS"), :solve_ots)
+end
+
+"""
+    solve_opf(opt_parameters::Dict, planning_results::Union{Dict,Nothing}=nothing)
+
+Solve a non-switching OPF planning model (`:model => "DCOPF"` or `"LACOPF"`)
+using the same investment-planning controls as `solve_ots`. For nonlinear AC
+replay or recovery (`:mode => "ACPF"` or `"ACOPF"`), delegates to `verify_ac`.
+"""
+function solve_opf(opt_parameters::Dict, planning_results::Union{Dict,Nothing}=nothing)
+    if haskey(opt_parameters, :mode) && opt_parameters[:mode] in ("ACPF", "ACOPF")
+        return verify_ac(opt_parameters, planning_results)
+    end
+    return _solve_linear_planning(opt_parameters, ("DCOPF", "LACOPF"), :solve_opf)
+end
+
+function _solve_linear_planning(opt_parameters::Dict, allowed_models, entrypoint::Symbol)
+    if haskey(opt_parameters, :model) && !(opt_parameters[:model] in allowed_models)
+        allowed = join(("'$m'" for m in allowed_models), " or ")
+        error("Invalid model type for $entrypoint: $(opt_parameters[:model]). Use $allowed.")
+    end
+
     # Validate required parameters
     validate_parameters!(opt_parameters)
 

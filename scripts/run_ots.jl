@@ -464,7 +464,8 @@ function main()
 
     # Run optimization
     try
-        results = solve_ots(opt_parameters)
+        results = opt_parameters[:model] in ("DCOPF", "LACOPF") ?
+            solve_opf(opt_parameters) : solve_ots(opt_parameters)
 
         # Print results
         print_results_summary(results, args["quiet"])

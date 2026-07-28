@@ -2,11 +2,12 @@
 
 ## Basic API
 
-The main function is `solve_ots(opt_parameters)` which takes a single dictionary and returns a results dictionary.
+The main planning entry points take a single dictionary and return a results dictionary.
 
 ```julia
 using PowerGridPlanning
-results = solve_ots(opt_parameters)
+ots_results = solve_ots(ots_parameters)  # DCOTS/LACOTS wildfire-aware switching
+opf_results = solve_opf(opf_parameters)  # DCOPF/LACOPF non-switching OPF
 ```
 
 ## Required Parameters
@@ -14,10 +15,10 @@ results = solve_ots(opt_parameters)
 ```julia
 opt_parameters = Dict(
     :network => "RTS",                    # Network name (see Available Data)
-    :model => "DCOTS",                    # "DCOTS", "LACOTS", "DCOPF", or "LACOPF"
-                                          #   DCOTS/LACOTS: wildfire-aware optimal transmission switching
-                                          #   DCOPF/LACOPF: pure OPF (no wildfire switching);
-                                          #                 investments still apply; objective restricted to "loadshed"/"cost"
+    :model => "DCOTS",                    # solve_ots: "DCOTS" or "LACOTS"
+                                          # solve_opf: "DCOPF" or "LACOPF"
+                                          #   OPF models have no wildfire switching;
+                                          #   investments still apply; objective restricted to "loadshed"/"cost"
     :objective => "tradeoff",             # "loadshed", "wildfire", "cost", "tradeoff" (DCOPF/LACOPF: "loadshed"/"cost" only)
     :times => [(2021, 7, 15)]             # Time specification (see below)
 )
@@ -36,7 +37,7 @@ opt_parameters = Dict(
     :objective => "loadshed",
     :times     => [(2021, 7, 15)],
 )
-results = solve_ots(opt_parameters)
+results = solve_opf(opt_parameters)
 ```
 
 Loads default to the case's `Pd`/`Qd` scaled by the built-in synthetic hourly profile,
@@ -116,7 +117,7 @@ opt_parameters = Dict(
 :lp_str => ""                     # If provided, save model to LP file at this path
 :log_str => ""                    # If provided, save Gurobi log to file at this path
 
-# Auto-plotting (triggered at end of solve_ots)
+# Auto-plotting (triggered at end of solve_ots / solve_opf)
 :plots    => false,               # false/"none" = no plots; "all" = network_overview + timeseries;
                                   # "inv_only" = network_overview only; "timeseries_only" = timeseries only
 :plot_dir => ""                   # Directory to save plots (default: current directory)
@@ -190,16 +191,19 @@ ac_check = verify_ac(Dict(
     :times    => [(2020, 6, 15)],
     :T        => 1,
     :data_dir => "test_data",
+    :feedback_enabled => true,
+    :feedback_output_path => "ac_diagnostic_report.md",
 ), planning_results)
 
 println("AC feasible all hours: $(ac_check[:feasible_all])")
 println("Failed hours: $(ac_check[:failed_hours])")
 println("AC recovery load shed: $(ac_check[:total_p_load_shed])")
+println("Diagnostic counts: $(ac_check[:violation_summary][:count_by_type])")
 ```
 
 Required `ac_parameters` keys:
 - `:network` - Network name
-- `:times` - Same time formats accepted by `solve_ots`
+- `:times` - Same time formats accepted by `solve_ots` / `solve_opf`
 - `:mode` - `"ACPF"` for strict replay feasibility or `"ACOPF"` for AC redispatch/recovery
 
 Optional AC parameters:
@@ -210,6 +214,24 @@ Optional AC parameters:
 - `:output_path => nothing` (required for `"jld2"` or `"txt"`)
 - `:load_shed_penalty => 1e6`
 - `:silent => true`
+- `:diagnostics_enabled => true` - Add per-hour diagnostic records and rollups
+- `:diagnostics_tolerance => 1e-5` - General tolerance for angle/load-shed diagnostics
+- `:diagnostics_thermal_tolerance => 1e-4` - Relative thermal overload tolerance
+- `:diagnostics_voltage_tolerance => 1e-5` - Voltage-limit tolerance
+- `:diagnostics_include_passed_hours => false` - Store diagnostic records for hours with no violations
+- `:diagnostics_top_n => 20` - Number of largest violations shown in Markdown reports
+- `:feedback_enabled => false` - Generate conservative report-only feedback hints
+- `:feedback_mode => "report"` - Currently only report mode is supported
+- `:feedback_output_path => nothing` - Optional Markdown diagnostic report path
+
+Diagnostic result keys are present when `:diagnostics_enabled => true`:
+- `:diagnostics` - Per-hour diagnostics with `:violations` and `:binding`
+- `:violation_summary` - Counts, max severity, hours by violation type, and worst hour
+- `:binding_elements` - Per-hour non-violation binding elements, such as reactive generator limits
+- `:feedback_hints` - Conservative follow-up suggestions when `:feedback_enabled => true`
+- `:diagnostic_report_path` - Path written when `:feedback_output_path` is provided
+
+For a one-shot planning plus AC verification workflow, use `solve_with_ac_feedback(opt_parameters, ac_parameters)`. It runs one `solve_ots` pass, one `verify_ac` pass, and returns `:planning_results`, `:ac_results`, and `:feedback_hints`.
 
 ## Time Specification Formats
 

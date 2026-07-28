@@ -8,7 +8,7 @@ This package provides a unified interface for transmission grid planning problem
 
 **Key Features:**
 - **Four formulations**: wildfire-aware switching (DCOTS, LACOTS) and pure power-flow baselines (DCOPF, LACOPF) sharing the same investment-planning interface
-- **Nonlinear AC verification**: Replay fixed planning decisions with AC power flow (`ACPF`) or run AC redispatch/recovery with load shedding (`ACOPF`)
+- **Nonlinear AC verification with diagnostics**: Replay fixed planning decisions with AC power flow (`ACPF`) or run AC redispatch/recovery with load shedding (`ACOPF`), including voltage, thermal, islanding, and recovery-stress diagnostics
 - **Multiple objective functions**: Load shedding minimization, risk-exposure minimization, generation cost minimization, and customizable tradeoffs
 - **Two switching methods**: Optimal MIP-based and fast thresholded heuristic
 - **Line hardening**: Optimize infrastructure investments (vegetation management, covered conductors, or undergrounding) to permanently reduce per-line risk exposure
@@ -104,7 +104,7 @@ Then open `tutorial.ipynb` from the Jupyter file browser.
 
 - [Models and Methods](guide/models.md) — the DCOTS/LACOTS/DCOPF/LACOPF formulations, switching methods, objectives, and hardening
 - [Data](guide/data.md) — bundled reference data, supported networks, and the solar/census/wildfire data pipelines
-- [Usage Guide](guide/usage.md) — every `solve_ots` and `verify_ac` parameter
+- [Usage Guide](guide/usage.md) — every `solve_ots`, `solve_opf`, and `verify_ac` parameter
 - [Command-Line Interface](guide/cli.md) — running studies from the terminal
 - [Examples](guide/examples.md) — 17 worked examples
 - [Results Dictionary](reference/results.md) — every key in the results

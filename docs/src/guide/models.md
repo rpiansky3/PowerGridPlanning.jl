@@ -23,6 +23,7 @@
   shouldn't be biased by wildfire considerations
 - Investment options (battery, solar, hardening) still apply and are co-optimized as usual
 - Allowed objectives: `"loadshed"` and `"cost"` only (`"wildfire"` and `"tradeoff"` require risk data)
+- Use `solve_opf(opt_parameters)` for DCOPF/LACOPF. Legacy `solve_ots` calls with OPF models still work with a warning.
 - LACOPF can warm-start from DCOPF (`:warm_start => "auto"`)
 
 ### Nonlinear AC Verification / Recovery
@@ -31,6 +32,7 @@
 - `:mode => "ACOPF"` performs AC redispatch/recovery with active/reactive load shedding, while keeping planning decisions fixed
 - Planning outputs are treated as fixed data: `:z` / `:switched_off_lines`, `:allocated_load`, solar capacity `:s`, and battery capacity `:x`
 - AC models do not create planning variables such as `z`, `y`, `x`, `s`, or `a`; they only create continuous operational AC variables
+- Diagnostics are enabled by default and classify solver failures, voltage limit violations, thermal overloads, angle-limit violations, AC recovery load shedding, reactive generator limit binding, and islanding
 - PowerIO is used for MATPOWER parsing; reference dictionaries and AC equations are package-owned
 
 ## Solution Methods

@@ -8,7 +8,7 @@ A Julia package for transmission grid planning on realistic power system network
 
 **Key Features:**
 - **Four formulations**: wildfire-aware switching (DCOTS, LACOTS) and pure power-flow baselines (DCOPF, LACOPF) sharing the same investment-planning interface
-- **Nonlinear AC verification**: Replay fixed planning decisions with AC power flow (`ACPF`) or run AC redispatch/recovery with load shedding (`ACOPF`)
+- **Nonlinear AC verification with diagnostics**: Replay fixed planning decisions with AC power flow (`ACPF`) or run AC redispatch/recovery with load shedding (`ACOPF`), including voltage, thermal, islanding, and recovery-stress diagnostics
 - **Investment planning**: Line hardening, battery energy storage (BESS), and solar PV siting under a shared infrastructure budget
 - **Multiple objectives**: Load shedding, risk exposure, generation cost, or a weighted tradeoff
 - **Two switching methods**: Optimal MIP-based and fast thresholded heuristic
@@ -22,7 +22,7 @@ Full documentation lives at **[rpiansky3.github.io/PowerGridPlanning.jl](https:/
 
 - [Models and Methods](https://rpiansky3.github.io/PowerGridPlanning.jl/stable/guide/models/) — formulations, switching methods, objectives, hardening
 - [Data](https://rpiansky3.github.io/PowerGridPlanning.jl/stable/guide/data/) — bundled reference data, supported networks, solar/census/wildfire pipelines
-- [Usage Guide](https://rpiansky3.github.io/PowerGridPlanning.jl/stable/guide/usage/) — every `solve_ots` and `verify_ac` parameter
+- [Usage Guide](https://rpiansky3.github.io/PowerGridPlanning.jl/stable/guide/usage/) — every `solve_ots`, `solve_opf`, and `verify_ac` parameter
 - [Command-Line Interface](https://rpiansky3.github.io/PowerGridPlanning.jl/stable/guide/cli/) — running studies from the terminal
 - [Examples](https://rpiansky3.github.io/PowerGridPlanning.jl/stable/guide/examples/) — 17 worked examples
 - [Results Dictionary](https://rpiansky3.github.io/PowerGridPlanning.jl/stable/reference/results/) and [Plotting](https://rpiansky3.github.io/PowerGridPlanning.jl/stable/reference/plotting/)

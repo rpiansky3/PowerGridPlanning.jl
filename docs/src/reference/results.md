@@ -1,6 +1,6 @@
 # Results Dictionary
 
-The `solve_ots()` function returns a dictionary with the following keys:
+The `solve_ots()` and `solve_opf()` planning functions return dictionaries with the following keys. OPF models omit switching-specific decision variables such as `:z` but keep the same high-level result fields where applicable.
 
 ## Optimization Status
 - `:status` - Termination status (e.g., `OPTIMAL`, `TIME_LIMIT`)
@@ -28,6 +28,9 @@ The `solve_ots()` function returns a dictionary with the following keys:
 - `:removed_risk` - Wildfire risk eliminated by switching
 - `:risk_reduction_pct` - Percentage of risk removed
 - `:switched_off_lines` - Dict mapping day index to list of de-energized line IDs
+- `:islanded_buses` - Dict mapping day index to buses disconnected from all reference buses after switching
+- `:islanded_bus_count` - Dict mapping day index to islanded-bus counts
+- `:total_islanded_buses` - Sum of per-day islanded-bus counts
 
 **Hardening Results (if hardening enabled):**
 - `:y` - Line hardening decisions `[hardenable_lines]` (1=hardened, 0=not hardened)
@@ -75,6 +78,11 @@ The `solve_ots()` function returns a dictionary with the following keys:
 - `:total_p_load_shed` - Total active load shed across all checked hours
 - `:total_q_load_shed` - Total reactive load shed across all checked hours
 - `:total_load_shed` - Alias for total active load shed
+- `:diagnostics` - Per-hour diagnostic records when diagnostics are enabled
+- `:violation_summary` - Rollup with `:count_by_type`, `:max_severity_by_type`, `:hours_by_type`, and `:worst_hour`
+- `:binding_elements` - Per-hour binding diagnostics, such as generators at reactive limits
+- `:feedback_hints` - Report-only suggestions when feedback is enabled
+- `:diagnostic_report_path` - Markdown report path when one was written
 
 Each `results[:hours][(d,t)]` includes:
 - `:vm`, `:va` - Bus voltage magnitudes and angles
@@ -82,3 +90,6 @@ Each `results[:hours][(d,t)]` includes:
 - `:p`, `:q` - Branch active/reactive flows in both directions
 - `:branch_status` - Fixed energized/off status used by the AC model
 - `:p_load_shed`, `:q_load_shed` - Present for `ACOPF` recovery runs
+- `:diagnostics` - Present when diagnostics are enabled; includes `:violations` and `:binding`
+
+Diagnostic violation types include `:solver_failure`, `:voltage_low`, `:voltage_high`, `:thermal_overload`, `:angle_difference`, `:active_load_shed`, `:reactive_load_shed`, and `:islanding`. Reactive generator limit binding is reported separately as `:reactive_limit_binding` in `:binding_elements`.
