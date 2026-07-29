@@ -20,7 +20,7 @@ test_data/solar_data/</code></pre><p>Wildfire risk is stored per (line, day). He
 first(rts_risk, 5)</code></pre><div><div style = "float: left;"><span>5×9 DataFrame</span></div><div style = "clear: both;"></div></div><div class = "data-frame" style = "overflow-x: scroll;"><table class = "data-frame" style = "margin-bottom: 6px;"><thead><tr class = "columnLabelRow"><th class = "stubheadLabel" style = "font-weight: bold; text-align: right;">Row</th><th style = "text-align: left;">date_of_forecast</th><th style = "text-align: left;">date_of_risk</th><th style = "text-align: left;">branch_id</th><th style = "text-align: left;">max_wfpi</th><th style = "text-align: left;">mean_wfpi</th><th style = "text-align: left;">cum_wfpi</th><th style = "text-align: left;">hr_max_wfpi</th><th style = "text-align: left;">hr_mean_wfpi</th><th style = "text-align: left;">hr_cum_wfpi</th></tr><tr class = "columnLabelRow"><th class = "stubheadLabel" style = "font-weight: bold; text-align: right;"></th><th title = "Dates.Date" style = "text-align: left;">Date</th><th title = "Dates.Date" style = "text-align: left;">Date</th><th title = "Int64" style = "text-align: left;">Int64</th><th title = "Int64" style = "text-align: left;">Int64</th><th title = "Float64" style = "text-align: left;">Float64</th><th title = "Int64" style = "text-align: left;">Int64</th><th title = "Int64" style = "text-align: left;">Int64</th><th title = "Float64" style = "text-align: left;">Float64</th><th title = "Int64" style = "text-align: left;">Int64</th></tr></thead><tbody><tr class = "dataRow"><td class = "rowLabel" style = "font-weight: bold; text-align: right;">1</td><td style = "text-align: left;">2020-06-04</td><td style = "text-align: left;">2020-06-04</td><td style = "text-align: right;">1</td><td style = "text-align: right;">0</td><td style = "text-align: right;">0.0</td><td style = "text-align: right;">0</td><td style = "text-align: right;">0</td><td style = "text-align: right;">0.0</td><td style = "text-align: right;">0</td></tr><tr class = "dataRow"><td class = "rowLabel" style = "font-weight: bold; text-align: right;">2</td><td style = "text-align: left;">2020-06-04</td><td style = "text-align: left;">2020-06-04</td><td style = "text-align: right;">2</td><td style = "text-align: right;">112</td><td style = "text-align: right;">103.455</td><td style = "text-align: right;">2276</td><td style = "text-align: right;">112</td><td style = "text-align: right;">78.0455</td><td style = "text-align: right;">1717</td></tr><tr class = "dataRow"><td class = "rowLabel" style = "font-weight: bold; text-align: right;">3</td><td style = "text-align: left;">2020-06-04</td><td style = "text-align: left;">2020-06-04</td><td style = "text-align: right;">3</td><td style = "text-align: right;">108</td><td style = "text-align: right;">100.4</td><td style = "text-align: right;">2008</td><td style = "text-align: right;">108</td><td style = "text-align: right;">62.4</td><td style = "text-align: right;">1248</td></tr><tr class = "dataRow"><td class = "rowLabel" style = "font-weight: bold; text-align: right;">4</td><td style = "text-align: left;">2020-06-04</td><td style = "text-align: left;">2020-06-04</td><td style = "text-align: right;">4</td><td style = "text-align: right;">107</td><td style = "text-align: right;">100.571</td><td style = "text-align: right;">704</td><td style = "text-align: right;">107</td><td style = "text-align: right;">75.1429</td><td style = "text-align: right;">526</td></tr><tr class = "dataRow"><td class = "rowLabel" style = "font-weight: bold; text-align: right;">5</td><td style = "text-align: left;">2020-06-04</td><td style = "text-align: left;">2020-06-04</td><td style = "text-align: right;">5</td><td style = "text-align: right;">110</td><td style = "text-align: right;">102.522</td><td style = "text-align: right;">2358</td><td style = "text-align: right;">110</td><td style = "text-align: right;">73.5652</td><td style = "text-align: right;">1692</td></tr></tbody></table></div><h3 id="Time-specification"><a class="docs-heading-anchor" href="#Time-specification">Time specification</a><a id="Time-specification-1"></a><a class="docs-heading-anchor-permalink" href="#Time-specification" title="Permalink"></a></h3><p>The <code>:times</code> parameter accepts several formats:</p><pre><code class="language-julia hljs">:times =&gt; [(2020, 6, 15)]                    # single day
 :times =&gt; [(2020, 6, 10), (2020, 6, 15)]     # specific days
 :times =&gt; &quot;June 2020&quot;                        # full month
-:times =&gt; &quot;2020&quot;                             # full year</code></pre><h2 id="3.-Basic-Optimizations"><a class="docs-heading-anchor" href="#3.-Basic-Optimizations">3. Basic Optimizations</a><a id="3.-Basic-Optimizations-1"></a><a class="docs-heading-anchor-permalink" href="#3.-Basic-Optimizations" title="Permalink"></a></h2><p>We solve three variants and compare them side by side:</p><table><tr><th style="text-align: right">Run</th><th style="text-align: right">Model</th><th style="text-align: right">Objective</th><th style="text-align: right">Switching</th><th style="text-align: right">What it represents</th></tr><tr><td style="text-align: right">A</td><td style="text-align: right">DCOPF</td><td style="text-align: right"><code>loadshed</code></td><td style="text-align: right">disabled</td><td style="text-align: right">True no-action baseline</td></tr><tr><td style="text-align: right">B</td><td style="text-align: right">DCOTS</td><td style="text-align: right"><code>loadshed</code></td><td style="text-align: right">thresholded</td><td style="text-align: right">Fast heuristic: pre-remove riskiest lines</td></tr><tr><td style="text-align: right">C</td><td style="text-align: right">DCOTS</td><td style="text-align: right"><code>tradeoff</code></td><td style="text-align: right">optimal</td><td style="text-align: right">Full MIP: co-optimize shed and risk</td></tr></table><h3 id="3a.-Baseline-DCOPF-(no-switching)"><a class="docs-heading-anchor" href="#3a.-Baseline-DCOPF-(no-switching)">3a. Baseline DCOPF (no switching)</a><a id="3a.-Baseline-DCOPF-(no-switching)-1"></a><a class="docs-heading-anchor-permalink" href="#3a.-Baseline-DCOPF-(no-switching)" title="Permalink"></a></h3><p><code>DCOPF</code> is a pure power-flow model: no switching variables and no wildfire risk enter the mathematical model at all — the package builds the <em>minimal</em> formulation for each problem.</p><pre><code class="language-julia hljs">results_base = solve_ots(merge(SETTINGS, Dict(
+:times =&gt; &quot;2020&quot;                             # full year</code></pre><h2 id="3.-Basic-Optimizations"><a class="docs-heading-anchor" href="#3.-Basic-Optimizations">3. Basic Optimizations</a><a id="3.-Basic-Optimizations-1"></a><a class="docs-heading-anchor-permalink" href="#3.-Basic-Optimizations" title="Permalink"></a></h2><p>We solve three variants and compare them side by side:</p><table><tr><th style="text-align: right">Run</th><th style="text-align: right">Model</th><th style="text-align: right">Entry point</th><th style="text-align: right">Objective</th><th style="text-align: right">Switching</th><th style="text-align: right">What it represents</th></tr><tr><td style="text-align: right">A</td><td style="text-align: right">DCOPF</td><td style="text-align: right"><code>solve_opf</code></td><td style="text-align: right"><code>loadshed</code></td><td style="text-align: right">disabled</td><td style="text-align: right">True no-action baseline</td></tr><tr><td style="text-align: right">B</td><td style="text-align: right">DCOTS</td><td style="text-align: right"><code>solve_ots</code></td><td style="text-align: right"><code>loadshed</code></td><td style="text-align: right">thresholded</td><td style="text-align: right">Fast heuristic: pre-remove riskiest lines</td></tr><tr><td style="text-align: right">C</td><td style="text-align: right">DCOTS</td><td style="text-align: right"><code>solve_ots</code></td><td style="text-align: right"><code>tradeoff</code></td><td style="text-align: right">optimal</td><td style="text-align: right">Full MIP: co-optimize shed and risk</td></tr></table><h3 id="3a.-Baseline-DCOPF-(no-switching)"><a class="docs-heading-anchor" href="#3a.-Baseline-DCOPF-(no-switching)">3a. Baseline DCOPF (no switching)</a><a id="3a.-Baseline-DCOPF-(no-switching)-1"></a><a class="docs-heading-anchor-permalink" href="#3a.-Baseline-DCOPF-(no-switching)" title="Permalink"></a></h3><p><code>DCOPF</code> is a pure power-flow model. Use <code>solve_opf</code> for OPF baselines: no switching variables and no wildfire risk enter the mathematical model at all.</p><pre><code class="language-julia hljs">results_base = solve_opf(merge(SETTINGS, Dict(
     :network   =&gt; &quot;RTS&quot;,
     :model     =&gt; &quot;DCOPF&quot;,
     :objective =&gt; &quot;loadshed&quot;,
@@ -73,8 +73,8 @@ Solving optimization...
 Extracting results...
 Optimization complete!
 Status: OPTIMAL
-Objective value: 4.164221951999998
-Total load shed: 4.164221951999998
+Objective value: 2.0821109759999987
+Total load shed: 2.0821109759999987
 Risk reduction: 50.63%
 Total islanded buses: 4</code></pre><h3 id="3c.-Optimal-switching-with-the-tradeoff-objective"><a class="docs-heading-anchor" href="#3c.-Optimal-switching-with-the-tradeoff-objective">3c. Optimal switching with the tradeoff objective</a><a id="3c.-Optimal-switching-with-the-tradeoff-objective-1"></a><a class="docs-heading-anchor-permalink" href="#3c.-Optimal-switching-with-the-tradeoff-objective" title="Permalink"></a></h3><p>The <code>tradeoff</code> objective jointly minimizes load shedding and wildfire risk exposure; <code>tradeoff_weight</code> sets the balance (0 → pure load shed, 1 → pure risk).</p><pre><code class="language-julia hljs">results_opt = solve_ots(merge(SETTINGS, Dict(
     :network         =&gt; &quot;RTS&quot;,
@@ -96,10 +96,10 @@ Solving optimization...
 Extracting results...
 Optimization complete!
 Status: OPTIMAL
-Objective value: 0.06964166823051707
-Total load shed: 16.204012927999596
-Risk reduction: 92.53%
-Total islanded buses: 60</code></pre><h3 id="Comparison"><a class="docs-heading-anchor" href="#Comparison">Comparison</a><a id="Comparison-1"></a><a class="docs-heading-anchor-permalink" href="#Comparison" title="Permalink"></a></h3><pre><code class="language-julia hljs">runs = [
+Objective value: 0.05296252004420112
+Total load shed: 14.084328960000056
+Risk reduction: 95.02%
+Total islanded buses: 61</code></pre><h3 id="Comparison"><a class="docs-heading-anchor" href="#Comparison">Comparison</a><a id="Comparison-1"></a><a class="docs-heading-anchor-permalink" href="#Comparison" title="Permalink"></a></h3><pre><code class="language-julia hljs">runs = [
     (&quot;A: Base DCOPF&quot;,       results_base),
     (&quot;B: Thresholded 50%&quot;,  results_thresh),
     (&quot;C: Optimal tradeoff&quot;, results_opt),
@@ -112,16 +112,16 @@ for (name, r) in runs
         length(r[:switched_off_lines][1])))
 end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Run                      Shed (MW)   Risk red.   Lines off
 A: Base DCOPF                 0.00        0.0%           0
-B: Thresholded 50%            4.16       50.6%          16
-C: Optimal tradeoff          16.20       92.5%          70</code></pre><p>The de-energized line IDs are available per day:</p><pre><code class="language-julia hljs">println(&quot;Lines off (thresholded): &quot;, results_thresh[:switched_off_lines][1])
+B: Thresholded 50%            2.08       50.6%          16
+C: Optimal tradeoff          14.08       95.0%          77</code></pre><p>The de-energized line IDs are available per day:</p><pre><code class="language-julia hljs">println(&quot;Lines off (thresholded): &quot;, results_thresh[:switched_off_lines][1])
 println(&quot;Lines off (optimal):     &quot;, results_opt[:switched_off_lines][1])</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Lines off (thresholded): [12, 43, 46, 53, 54, 66, 67, 68, 72, 81, 83, 91, 92, 100, 101, 118]
-Lines off (optimal):     [2, 3, 4, 5, 12, 13, 14, 19, 20, 21, 24, 27, 28, 29, 31, 33, 34, 35, 40, 41, 42, 43, 44, 45, 46, 48, 49, 50, 52, 53, 54, 59, 60, 62, 63, 66, 67, 68, 69, 71, 72, 73, 74, 75, 76, 77, 79, 81, 82, 83, 84, 85, 87, 88, 91, 92, 94, 96, 97, 99, 100, 101, 104, 105, 114, 115, 116, 118, 119, 120]</code></pre><h3 id="Generation-and-load-shedding-over-time"><a class="docs-heading-anchor" href="#Generation-and-load-shedding-over-time">Generation and load shedding over time</a><a id="Generation-and-load-shedding-over-time-1"></a><a class="docs-heading-anchor-permalink" href="#Generation-and-load-shedding-over-time" title="Permalink"></a></h3><p>Result arrays have shape <code>[D × T × units]</code>. Summing over generators gives the hourly dispatch profile:</p><pre><code class="language-julia hljs">T = SETTINGS[:T]
+Lines off (optimal):     [2, 3, 4, 5, 8, 12, 13, 14, 19, 20, 21, 24, 27, 28, 29, 31, 33, 34, 35, 40, 41, 42, 43, 44, 45, 46, 48, 49, 50, 52, 53, 54, 55, 60, 61, 62, 63, 66, 67, 68, 69, 71, 72, 73, 74, 75, 76, 78, 79, 81, 82, 83, 84, 85, 86, 87, 88, 90, 91, 92, 94, 96, 97, 99, 100, 101, 104, 105, 106, 108, 113, 114, 115, 116, 118, 119, 120]</code></pre><h3 id="Generation-and-load-shedding-over-time"><a class="docs-heading-anchor" href="#Generation-and-load-shedding-over-time">Generation and load shedding over time</a><a id="Generation-and-load-shedding-over-time-1"></a><a class="docs-heading-anchor-permalink" href="#Generation-and-load-shedding-over-time" title="Permalink"></a></h3><p>Result arrays have shape <code>[D × T × units]</code>. Summing over generators gives the hourly dispatch profile:</p><pre><code class="language-julia hljs">T = SETTINGS[:T]
 gen(r) = [sum(r[:g][1, t, :]) for t in 1:T]
 
 plot(1:T, [gen(results_base) gen(results_thresh) gen(results_opt)] .* 100,
      label=[&quot;Base DCOPF&quot; &quot;Thresholded&quot; &quot;Optimal tradeoff&quot;],
      xlabel=&quot;Hour&quot;, ylabel=&quot;Total generation (MW)&quot;,
-     marker=:circle, lw=2, legend=:bottomright)</code></pre><img src="aa06c050.svg" alt="Example block output"/><h2 id="4.-Infrastructure-Investments"><a class="docs-heading-anchor" href="#4.-Infrastructure-Investments">4. Infrastructure Investments</a><a id="4.-Infrastructure-Investments-1"></a><a class="docs-heading-anchor-permalink" href="#4.-Infrastructure-Investments" title="Permalink"></a></h2><p>PowerGridPlanning co-optimizes operational switching with long-term investments, all sharing one <code>:infrastructure_budget</code>:</p><ul><li><strong>Line hardening</strong> — permanently reduce a line&#39;s wildfire risk (vegetation management, covered conductors, undergrounding)</li><li><strong>Battery energy storage (BESS)</strong> — siting, sizing, and hourly dispatch</li><li><strong>Solar PV</strong> — siting and sizing with hourly capacity factors</li></ul><p>Investment variables are only added to the model when the corresponding feature is enabled.</p><h3 id="4a.-Line-hardening"><a class="docs-heading-anchor" href="#4a.-Line-hardening">4a. Line hardening</a><a id="4a.-Line-hardening-1"></a><a class="docs-heading-anchor-permalink" href="#4a.-Line-hardening" title="Permalink"></a></h3><p>Here a risk constraint (<code>threshold_pct</code>) forces risky lines out of service — unless the budget hardens them, which lets them stay energized at reduced risk.</p><pre><code class="language-julia hljs">results_harden = solve_ots(merge(SETTINGS, Dict(
+     marker=:circle, lw=2, legend=:bottomright)</code></pre><img src="264e8135.svg" alt="Example block output"/><h2 id="4.-Infrastructure-Investments"><a class="docs-heading-anchor" href="#4.-Infrastructure-Investments">4. Infrastructure Investments</a><a id="4.-Infrastructure-Investments-1"></a><a class="docs-heading-anchor-permalink" href="#4.-Infrastructure-Investments" title="Permalink"></a></h2><p>PowerGridPlanning co-optimizes operational switching with long-term investments, all sharing one <code>:infrastructure_budget</code>:</p><ul><li><strong>Line hardening</strong> — permanently reduce a line&#39;s wildfire risk (vegetation management, covered conductors, undergrounding)</li><li><strong>Battery energy storage (BESS)</strong> — siting, sizing, and hourly dispatch</li><li><strong>Solar PV</strong> — siting and sizing with hourly capacity factors</li></ul><p>Investment variables are only added to the model when the corresponding feature is enabled.</p><h3 id="4a.-Line-hardening"><a class="docs-heading-anchor" href="#4a.-Line-hardening">4a. Line hardening</a><a id="4a.-Line-hardening-1"></a><a class="docs-heading-anchor-permalink" href="#4a.-Line-hardening" title="Permalink"></a></h3><p>Here a risk constraint (<code>threshold_pct</code>) forces risky lines out of service — unless the budget hardens them, which lets them stay energized at reduced risk.</p><pre><code class="language-julia hljs">results_harden = solve_ots(merge(SETTINGS, Dict(
     :network                =&gt; &quot;RTS&quot;,
     :model                  =&gt; &quot;DCOTS&quot;,
     :objective              =&gt; &quot;loadshed&quot;,
@@ -173,12 +173,12 @@ Solving optimization...
 Extracting results...
 Optimization complete!
 Status: OPTIMAL
-Objective value: 0.9500000000000001
-Total load shed: 0.0
-Risk reduction: 50.57%
-Total islanded buses: 1
+Objective value: 0.9399999999999997
+Total load shed: -2.7755575615628914e-16
+Risk reduction: 50.81%
+Total islanded buses: 2
 Hardened lines: [42, 48, 55, 56, 71, 73, 74, 86, 94, 96, 120]
-Load shed: 0.0 MW (vs 4.16 MW without hardening)</code></pre><h3 id="4b.-Battery-storage"><a class="docs-heading-anchor" href="#4b.-Battery-storage">4b. Battery storage</a><a id="4b.-Battery-storage-1"></a><a class="docs-heading-anchor-permalink" href="#4b.-Battery-storage" title="Permalink"></a></h3><p>With the <code>tradeoff</code> objective, the solver de-energizes risky lines and places storage where it best covers the resulting shortfalls.</p><pre><code class="language-julia hljs">results_batt = solve_ots(merge(SETTINGS, Dict(
+Load shed: -0.0 MW (vs 2.08 MW without hardening)</code></pre><h3 id="4b.-Battery-storage"><a class="docs-heading-anchor" href="#4b.-Battery-storage">4b. Battery storage</a><a id="4b.-Battery-storage-1"></a><a class="docs-heading-anchor-permalink" href="#4b.-Battery-storage" title="Permalink"></a></h3><p>With the <code>tradeoff</code> objective, the solver de-energizes risky lines and places storage where it best covers the resulting shortfalls.</p><pre><code class="language-julia hljs">results_batt = solve_ots(merge(SETTINGS, Dict(
     :network               =&gt; &quot;RTS&quot;,
     :model                 =&gt; &quot;DCOTS&quot;,
     :objective             =&gt; &quot;tradeoff&quot;,
@@ -219,11 +219,11 @@ Solving optimization...
 Extracting results...
 Optimization complete!
 Status: OPTIMAL
-Objective value: 0.060919195365489
-Total load shed: 10.92791439382745
-Risk reduction: 92.27%
-Total islanded buses: 60
-Buses with batteries: [204, 205, 208, 215, 304, 305, 307, 308]</code></pre><p>Dispatch profile of the largest installed unit:</p><pre><code class="language-julia hljs">batt_buses = results_batt[:batteries_installed]
+Objective value: 0.04399279599001698
+Total load shed: 9.334619375290762
+Risk reduction: 95.02%
+Total islanded buses: 61
+Buses with batteries: [104, 204, 205, 208, 304, 305]</code></pre><p>Dispatch profile of the largest installed unit:</p><pre><code class="language-julia hljs">batt_buses = results_batt[:batteries_installed]
 if !isempty(batt_buses)
     bus = batt_buses[argmax([results_batt[:x][b] for b in batt_buses])]
     soc       = [results_batt[:soc][1, t, bus] for t in 0:T] .* 100
@@ -235,7 +235,7 @@ if !isempty(batt_buses)
     p2 = bar(1:T, discharge .- charge, label=&quot;Net discharge (MW)&quot;, xlabel=&quot;Hour&quot;)
     plot(p1, p2, layout=(2, 1), size=(700, 500),
          plot_title=&quot;Battery at bus $bus ($(round(results_batt[:x][bus]*100, digits=1)) MWh)&quot;)
-end</code></pre><img src="12a2f0f2.svg" alt="Example block output"/><h3 id="4c.-Combined-portfolio:-hardening-batteries-solar"><a class="docs-heading-anchor" href="#4c.-Combined-portfolio:-hardening-batteries-solar">4c. Combined portfolio: hardening + batteries + solar</a><a id="4c.-Combined-portfolio:-hardening-batteries-solar-1"></a><a class="docs-heading-anchor-permalink" href="#4c.-Combined-portfolio:-hardening-batteries-solar" title="Permalink"></a></h3><p>All three investment types compete for the same budget; the solver allocates spending across them optimally.</p><pre><code class="language-julia hljs">results_all = solve_ots(merge(SETTINGS, Dict(
+end</code></pre><img src="7e02d64d.svg" alt="Example block output"/><h3 id="4c.-Combined-portfolio:-hardening-batteries-solar"><a class="docs-heading-anchor" href="#4c.-Combined-portfolio:-hardening-batteries-solar">4c. Combined portfolio: hardening + batteries + solar</a><a id="4c.-Combined-portfolio:-hardening-batteries-solar-1"></a><a class="docs-heading-anchor-permalink" href="#4c.-Combined-portfolio:-hardening-batteries-solar" title="Permalink"></a></h3><p>All three investment types compete for the same budget; the solver allocates spending across them optimally.</p><pre><code class="language-julia hljs">results_all = solve_ots(merge(SETTINGS, Dict(
     :network                =&gt; &quot;RTS&quot;,
     :model                  =&gt; &quot;DCOTS&quot;,
     :objective              =&gt; &quot;tradeoff&quot;,
@@ -316,12 +316,12 @@ Solving optimization...
 Extracting results...
 Optimization complete!
 Status: OPTIMAL
-Objective value: 0.05237610432282268
-Total load shed: 13.081369390282083
-Risk reduction: 94.74%
+Objective value: 0.03811828963410802
+Total load shed: 10.537460875336903
+Risk reduction: 96.58%
 Total islanded buses: 60
-Hardened lines:  [51, 52, 55, 86, 90]
-Battery buses:   [211, 213, 215]
+Hardened lines:  [51, 52, 55, 70]
+Battery buses:   [205]
 Solar buses:     Int64[]</code></pre><h3 id="4d.-Built-in-plots"><a class="docs-heading-anchor" href="#4d.-Built-in-plots">4d. Built-in plots</a><a id="4d.-Built-in-plots-1"></a><a class="docs-heading-anchor-permalink" href="#4d.-Built-in-plots" title="Permalink"></a></h3><p><code>plot_results</code> generates figures from any results dictionary. The <code>:network_overview</code> feature draws the network geographically — branches colored by risk, buses sized by load shed, and installed infrastructure overlaid.</p><pre><code class="language-julia hljs">plot_results(results_all, [:network_overview, :load_shed_timeseries];
              format=&quot;png&quot;, output_dir=&quot;tutorial_plots&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Loading RTS wildfire data from CSV...
 Loaded RTS wildfire data from CSV for 1 days, max 90 risky lines per day
@@ -353,10 +353,10 @@ Solving optimization...
 Extracting results...
 Optimization complete!
 Status: OPTIMAL
-Objective value: -1.4155364161962397e-16
-Total load shed: -3.549938121238938e-14
-Risk reduction: 50.74%
-Total islanded buses: 47
+Objective value: -7.46836570484146e-16
+Total load shed: -1.872946242542639e-13
+Risk reduction: 70.77%
+Total islanded buses: 52
 Loading RTS wildfire data from CSV...
 Loaded RTS wildfire data from CSV for 1 days, max 90 risky lines per day
 Building DCOTS model...
@@ -371,9 +371,9 @@ Solving optimization...
 Extracting results...
 Optimization complete!
 Status: OPTIMAL
-Objective value: 0.04696372984293529
-Total load shed: 2.1558406399999983
-Risk reduction: 83.79%
+Objective value: 0.0333976470360969
+Total load shed: 2.4522744945798536e-13
+Risk reduction: 86.64%
 Total islanded buses: 60
 Loading RTS wildfire data from CSV...
 Loaded RTS wildfire data from CSV for 1 days, max 90 risky lines per day
@@ -389,27 +389,9 @@ Solving optimization...
 Extracting results...
 Optimization complete!
 Status: OPTIMAL
-Objective value: 0.06964166823051707
-Total load shed: 16.204012927999596
-Risk reduction: 92.53%
-Total islanded buses: 60
-Loading RTS wildfire data from CSV...
-Loaded RTS wildfire data from CSV for 1 days, max 90 risky lines per day
-Building DCOTS model...
-Switching method: optimal
-Network: RTS
-Objective: tradeoff
-Days: 1, Hours per day: 6
-Adding variables...
-Adding objective function...
-Adding constraints...
-Solving optimization...
-Extracting results...
-Optimization complete!
-Status: OPTIMAL
-Objective value: 0.05787092342248689
-Total load shed: 35.21564684799999
-Risk reduction: 96.96%
+Objective value: 0.05296252004420112
+Total load shed: 14.084328960000056
+Risk reduction: 95.02%
 Total islanded buses: 61
 Loading RTS wildfire data from CSV...
 Loaded RTS wildfire data from CSV for 1 days, max 90 risky lines per day
@@ -425,8 +407,26 @@ Solving optimization...
 Extracting results...
 Optimization complete!
 Status: OPTIMAL
+Objective value: 0.04190773963008953
+Total load shed: 32.35215769599937
+Risk reduction: 98.71%
+Total islanded buses: 64
+Loading RTS wildfire data from CSV...
+Loaded RTS wildfire data from CSV for 1 days, max 90 risky lines per day
+Building DCOTS model...
+Switching method: optimal
+Network: RTS
+Objective: tradeoff
+Days: 1, Hours per day: 6
+Adding variables...
+Adding objective function...
+Adding constraints...
+Solving optimization...
+Extracting results...
+Optimization complete!
+Status: OPTIMAL
 Objective value: 0.0
-Total load shed: 136.98446676193387
+Total load shed: 91.36595893512526
 Risk reduction: 100.0%
 Total islanded buses: 69
 ✓ Saved: tutorial_plots/tradeoff_curve.png</code></pre><p><img src="../tutorial_plots/tradeoff_curve.png" alt="Tradeoff curve"/></p><h2 id="5.-Parameters-and-Customization"><a class="docs-heading-anchor" href="#5.-Parameters-and-Customization">5. Parameters and Customization</a><a id="5.-Parameters-and-Customization-1"></a><a class="docs-heading-anchor-permalink" href="#5.-Parameters-and-Customization" title="Permalink"></a></h2><h3 id="5a.-Objective-functions"><a class="docs-heading-anchor" href="#5a.-Objective-functions">5a. Objective functions</a><a id="5a.-Objective-functions-1"></a><a class="docs-heading-anchor-permalink" href="#5a.-Objective-functions" title="Permalink"></a></h3><table><tr><th style="text-align: right"><code>:objective</code></th><th style="text-align: right">Minimizes</th><th style="text-align: right">Best for</th></tr><tr><td style="text-align: right"><code>&quot;loadshed&quot;</code></td><td style="text-align: right">Total load shed (MW)</td><td style="text-align: right">Reliability studies</td></tr><tr><td style="text-align: right"><code>&quot;wildfire&quot;</code></td><td style="text-align: right">Active wildfire risk</td><td style="text-align: right">Wildfire safety focus</td></tr><tr><td style="text-align: right"><code>&quot;cost&quot;</code></td><td style="text-align: right">Generation cost + VOLL × load shed (+ investment costs)</td><td style="text-align: right">Economic studies</td></tr><tr><td style="text-align: right"><code>&quot;tradeoff&quot;</code></td><td style="text-align: right">Weighted shed + risk</td><td style="text-align: right">Pareto analysis</td></tr></table><pre><code class="language-julia hljs">results_cost = solve_ots(merge(SETTINGS, Dict(
@@ -451,11 +451,11 @@ Solving optimization...
 Extracting results...
 Optimization complete!
 Status: OPTIMAL
-Objective value: 63.146154140158316
-Total load shed: -1.6653345369377348e-16
-Risk reduction: 35.65%
-Total islanded buses: 1
-Total cost: $63.0</code></pre><h3 id="5b.-Multi-day-studies"><a class="docs-heading-anchor" href="#5b.-Multi-day-studies">5b. Multi-day studies</a><a id="5b.-Multi-day-studies-1"></a><a class="docs-heading-anchor-permalink" href="#5b.-Multi-day-studies" title="Permalink"></a></h3><p>Pass several days (or a month/year string) and results arrays gain a day dimension <code>[D × T × ...]</code>. Investment decisions are shared across all days while operations are day-specific.</p><pre><code class="language-julia hljs">results_multi = solve_ots(merge(SETTINGS, Dict(
+Objective value: -5.551115123125783e-13
+Total load shed: -5.551115123125783e-17
+Risk reduction: 29.91%
+Total islanded buses: 2
+Total cost: $-0.0</code></pre><h3 id="5b.-Multi-day-studies"><a class="docs-heading-anchor" href="#5b.-Multi-day-studies">5b. Multi-day studies</a><a id="5b.-Multi-day-studies-1"></a><a class="docs-heading-anchor-permalink" href="#5b.-Multi-day-studies" title="Permalink"></a></h3><p>Pass several days (or a month/year string) and results arrays gain a day dimension <code>[D × T × ...]</code>. Investment decisions are shared across all days while operations are day-specific.</p><pre><code class="language-julia hljs">results_multi = solve_ots(merge(SETTINGS, Dict(
     :network   =&gt; &quot;RTS&quot;,
     :model     =&gt; &quot;DCOTS&quot;,
     :objective =&gt; &quot;loadshed&quot;,
@@ -500,7 +500,9 @@ solve_ots(merge(SETTINGS, Dict(
 
 using JLD2
 reloaded = JLD2.load(joinpath(out, &quot;rts_base.jld2&quot;), &quot;results&quot;)
-println(&quot;Reloaded load shed: &quot;, round(reloaded[:total_load_shed], digits=2), &quot; MW&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">✓ OPF-only model (DCOPF): wildfire risk disabled
+println(&quot;Reloaded load shed: &quot;, round(reloaded[:total_load_shed], digits=2), &quot; MW&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">┌ Warning: solve_ots called with OPF-only model DCOPF; delegating to solve_opf. Prefer solve_opf for DCOPF/LACOPF.
+└ @ PowerGridPlanning ~/work/PowerGridPlanning.jl/PowerGridPlanning.jl/src/PowerGridPlanning.jl:158
+✓ OPF-only model (DCOPF): wildfire risk disabled
 Building DCOPF model...
 Switching method: optimal
 Network: RTS
@@ -516,7 +518,7 @@ Status: OPTIMAL
 Objective value: 0.0
 Total load shed: 0.0
 Risk reduction: 0.0%
-Results saved to: /tmp/jl_FEKUxn/rts_base.jld2
+Results saved to: /tmp/jl_F0qpse/rts_base.jld2
 Reloaded load shed: 0.0 MW</code></pre><h3 id="5e.-LACOTS:-linearized-AC-model"><a class="docs-heading-anchor" href="#5e.-LACOTS:-linearized-AC-model">5e. LACOTS: linearized AC model</a><a id="5e.-LACOTS:-linearized-AC-model-1"></a><a class="docs-heading-anchor-permalink" href="#5e.-LACOTS:-linearized-AC-model" title="Permalink"></a></h3><p><code>LACOTS</code> adds reactive power and voltage-magnitude variables for a more accurate AC representation. <code>warm_start =&gt; &quot;auto&quot;</code> first solves DCOTS and initializes LACOTS from it.</p><pre><code class="language-julia hljs">results_lac = solve_ots(merge(SETTINGS, Dict(
     :network    =&gt; &quot;RTS&quot;,
     :model      =&gt; &quot;LACOTS&quot;,
@@ -556,20 +558,26 @@ Solving optimization...
 Extracting results...
 Optimization complete!
 Status: OPTIMAL
-Objective value: 1.0408340855860843e-17
+Objective value: 5.204170427930421e-18
 Total load shed: 0.0
 Risk reduction: 0.0%
 Total islanded buses: 0
-LACOTS load shed: 0.0 MW</code></pre><h3 id="5f.-Nonlinear-AC-verification"><a class="docs-heading-anchor" href="#5f.-Nonlinear-AC-verification">5f. Nonlinear AC verification</a><a id="5f.-Nonlinear-AC-verification-1"></a><a class="docs-heading-anchor-permalink" href="#5f.-Nonlinear-AC-verification" title="Permalink"></a></h3><p><code>verify_ac</code> replays fixed planning decisions in a full nonlinear AC model (via Ipopt): <code>&quot;ACPF&quot;</code> checks strict feasibility, <code>&quot;ACOPF&quot;</code> runs recovery redispatch with load shedding.</p><pre><code class="language-julia hljs">ac = verify_ac(Dict(
+LACOTS load shed: 0.0 MW</code></pre><h3 id="5f.-Nonlinear-AC-verification"><a class="docs-heading-anchor" href="#5f.-Nonlinear-AC-verification">5f. Nonlinear AC verification</a><a id="5f.-Nonlinear-AC-verification-1"></a><a class="docs-heading-anchor-permalink" href="#5f.-Nonlinear-AC-verification" title="Permalink"></a></h3><p><code>verify_ac</code> replays fixed planning decisions in a full nonlinear AC model (via Ipopt): <code>&quot;ACPF&quot;</code> checks strict feasibility, <code>&quot;ACOPF&quot;</code> runs recovery redispatch with load shedding. Diagnostics are enabled by default and report solver failures, voltage violations, thermal overloads, angle-limit violations, recovery load shedding, reactive limit binding, and islanding.</p><pre><code class="language-julia hljs">mkpath(&quot;tutorial_output&quot;)
+
+ac = verify_ac(Dict(
     :network  =&gt; &quot;RTS&quot;,
     :mode     =&gt; &quot;ACOPF&quot;,
     :times    =&gt; [(2020, 6, 15)],
     :T        =&gt; 1,                  # one hour keeps the tutorial fast
     :data_dir =&gt; &quot;test_data&quot;,
+    :feedback_enabled =&gt; true,
+    :feedback_output_path =&gt; &quot;tutorial_output/ac_diagnostic_report.md&quot;,
 ), results_thresh);
 
 println(&quot;AC-feasible in all hours: &quot;, ac[:feasible_all])
-println(&quot;AC load shed: &quot;, round(ac[:total_load_shed], digits=3))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">✓ OPF-only model (DCOPF): wildfire risk disabled
+println(&quot;AC load shed: &quot;, round(ac[:total_load_shed], digits=3))
+println(&quot;Diagnostic counts: &quot;, ac[:violation_summary][:count_by_type])
+println(&quot;Diagnostic report: &quot;, get(ac, :diagnostic_report_path, &quot;none&quot;))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">✓ OPF-only model (DCOPF): wildfire risk disabled
 
 ******************************************************************************
 This program contains Ipopt, a library for large-scale nonlinear optimization.
@@ -578,7 +586,9 @@ This program contains Ipopt, a library for large-scale nonlinear optimization.
 ******************************************************************************
 
 AC-feasible in all hours: true
-AC load shed: 0.964</code></pre><h3 id="5g.-Custom-wildfire-risk-data"><a class="docs-heading-anchor" href="#5g.-Custom-wildfire-risk-data">5g. Custom wildfire risk data</a><a id="5g.-Custom-wildfire-risk-data-1"></a><a class="docs-heading-anchor-permalink" href="#5g.-Custom-wildfire-risk-data" title="Permalink"></a></h3><p>Supply your own per-line risk instead of the built-in USGS FPI files, as a nested dictionary <code>day_index =&gt; Dict(line_id =&gt; risk)</code>:</p><pre><code class="language-julia hljs">day_df = filter(r -&gt; string(r.date_of_forecast) == &quot;2020-06-15&quot;, rts_risk)
+AC load shed: 0.482
+Diagnostic counts: Dict(:active_load_shed =&gt; 1, :reactive_load_shed =&gt; 1, :islanding =&gt; 1)
+Diagnostic report: tutorial_output/ac_diagnostic_report.md</code></pre><h3 id="5g.-Custom-wildfire-risk-data"><a class="docs-heading-anchor" href="#5g.-Custom-wildfire-risk-data">5g. Custom wildfire risk data</a><a id="5g.-Custom-wildfire-risk-data-1"></a><a class="docs-heading-anchor-permalink" href="#5g.-Custom-wildfire-risk-data" title="Permalink"></a></h3><p>Supply your own per-line risk instead of the built-in USGS FPI files, as a nested dictionary <code>day_index =&gt; Dict(line_id =&gt; risk)</code>:</p><pre><code class="language-julia hljs">day_df = filter(r -&gt; string(r.date_of_forecast) == &quot;2020-06-15&quot;, rts_risk)
 custom_risk = Dict(1 =&gt; Dict{Int,Float64}(
     row.branch_id =&gt; 2.0 * row.cum_wfpi for row in eachrow(day_df)))
 
@@ -608,11 +618,11 @@ Solving optimization...
 Extracting results...
 Optimization complete!
 Status: OPTIMAL
-Objective value: 0.06940018999736586
-Total load shed: 16.204012928000026
-Risk reduction: 92.58%
+Objective value: 0.05296252004420101
+Total load shed: 14.084328959999999
+Risk reduction: 95.02%
 Total islanded buses: 72
-Lines off under doubled risk: [1, 2, 3, 4, 5, 7, 12, 13, 14, 15, 17, 19, 20, 21, 23, 24, 26, 27, 28, 29, 31, 33, 34, 35, 37, 38, 40, 41, 42, 43, 44, 45, 46, 48, 49, 50, 52, 53, 54, 55, 57, 59, 60, 62, 63, 66, 67, 68, 69, 71, 72, 73, 74, 75, 76, 78, 79, 80, 81, 82, 83, 84, 85, 87, 88, 91, 92, 94, 96, 97, 99, 100, 101, 104, 105, 109, 111, 112, 114, 115, 116, 118, 119, 120]</code></pre><h3 id="5h.-User-supplied-networks"><a class="docs-heading-anchor" href="#5h.-User-supplied-networks">5h. User-supplied networks</a><a id="5h.-User-supplied-networks-1"></a><a class="docs-heading-anchor-permalink" href="#5h.-User-supplied-networks" title="Permalink"></a></h3><p>Any MATPOWER <code>.m</code> case can be used directly via <code>:case_file</code> — no pre-configuration needed. A bare case solves DCOPF/LACOPF out of the box; geography-dependent features ask explicitly for the data they need (see <a href="../guide/usage/#User-Supplied-Networks">User-Supplied Networks</a> in the Usage Guide). Here we treat the bundled RTS case file as if it were an external case:</p><pre><code class="language-julia hljs">my_case = joinpath(DATA, &quot;networks&quot;, &quot;RTS_GMLC.m&quot;)
+Lines off under doubled risk: [1, 2, 3, 4, 5, 7, 8, 12, 13, 14, 18, 19, 20, 21, 23, 24, 27, 28, 29, 30, 31, 32, 33, 34, 35, 37, 38, 40, 41, 42, 43, 44, 45, 46, 48, 49, 50, 52, 53, 54, 55, 57, 59, 60, 62, 63, 66, 67, 68, 69, 71, 72, 73, 74, 75, 76, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 90, 91, 92, 93, 94, 96, 97, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120]</code></pre><h3 id="5h.-User-supplied-networks"><a class="docs-heading-anchor" href="#5h.-User-supplied-networks">5h. User-supplied networks</a><a id="5h.-User-supplied-networks-1"></a><a class="docs-heading-anchor-permalink" href="#5h.-User-supplied-networks" title="Permalink"></a></h3><p>Any MATPOWER <code>.m</code> case can be used directly via <code>:case_file</code> — no pre-configuration needed. A bare case solves DCOPF/LACOPF out of the box; geography-dependent features ask explicitly for the data they need (see <a href="../guide/usage/#User-Supplied-Networks">User-Supplied Networks</a> in the Usage Guide). Here we treat the bundled RTS case file as if it were an external case:</p><pre><code class="language-julia hljs">my_case = joinpath(DATA, &quot;networks&quot;, &quot;RTS_GMLC.m&quot;)
 
 results_file = solve_ots(merge(SETTINGS, Dict(
     :case_file =&gt; my_case,           # any path; :network label defaults to the file name
@@ -621,7 +631,9 @@ results_file = solve_ots(merge(SETTINGS, Dict(
     :times     =&gt; [(2020, 6, 15)],
 )));
 
-println(&quot;Solved network &#39;&quot;, results_file[:network], &quot;&#39; from a case file path&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">✓ Loaded user-supplied case file: /home/runner/work/PowerGridPlanning.jl/PowerGridPlanning.jl/test_data/networks/RTS_GMLC.m (label: RTS_GMLC)
+println(&quot;Solved network &#39;&quot;, results_file[:network], &quot;&#39; from a case file path&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">┌ Warning: solve_ots called with OPF-only model DCOPF; delegating to solve_opf. Prefer solve_opf for DCOPF/LACOPF.
+└ @ PowerGridPlanning ~/work/PowerGridPlanning.jl/PowerGridPlanning.jl/src/PowerGridPlanning.jl:158
+✓ Loaded user-supplied case file: /home/runner/work/PowerGridPlanning.jl/PowerGridPlanning.jl/test_data/networks/RTS_GMLC.m (label: RTS_GMLC)
 ✓ OPF-only model (DCOPF): wildfire risk disabled
 Building DCOPF model...
 Switching method: optimal
@@ -639,4 +651,4 @@ Objective value: 0.0
 Total load shed: 0.0
 Risk reduction: 0.0%
 Solved network &#39;RTS_GMLC&#39; from a case file path</code></pre><h3 id="5i.-Auto-plotting-during-solve"><a class="docs-heading-anchor" href="#5i.-Auto-plotting-during-solve">5i. Auto-plotting during solve</a><a id="5i.-Auto-plotting-during-solve-1"></a><a class="docs-heading-anchor-permalink" href="#5i.-Auto-plotting-during-solve" title="Permalink"></a></h3><p>Set <code>:plots</code> to generate figures automatically at the end of <code>solve_ots</code>:</p><pre><code class="language-julia hljs">:plots    =&gt; &quot;all&quot;,          # or &quot;inv_only&quot; / &quot;timeseries_only&quot;
-:plot_dir =&gt; &quot;my_plots&quot;,</code></pre><h2 id="Summary"><a class="docs-heading-anchor" href="#Summary">Summary</a><a id="Summary-1"></a><a class="docs-heading-anchor-permalink" href="#Summary" title="Permalink"></a></h2><table><tr><th style="text-align: right">Step</th><th style="text-align: right">What you did</th></tr><tr><td style="text-align: right">Setup</td><td style="text-align: right">Loaded the package and the bundled reference dataset</td></tr><tr><td style="text-align: right">Baseline</td><td style="text-align: right">DCOPF with no switching — the minimal model</td></tr><tr><td style="text-align: right">Switching</td><td style="text-align: right">Thresholded heuristic vs. optimal MIP with the tradeoff objective</td></tr><tr><td style="text-align: right">Investments</td><td style="text-align: right">Hardening, batteries, and solar under one shared budget</td></tr><tr><td style="text-align: right">Plots</td><td style="text-align: right">Geographic overview, time series, and the Pareto tradeoff curve</td></tr><tr><td style="text-align: right">Customization</td><td style="text-align: right">Objectives, multi-day horizons, solver settings, saving/loading</td></tr><tr><td style="text-align: right">Fidelity</td><td style="text-align: right">LACOTS linearized AC and nonlinear AC verification with <code>verify_ac</code></td></tr><tr><td style="text-align: right">Your data</td><td style="text-align: right">Custom risk dictionaries and user-supplied MATPOWER cases</td></tr></table><p>For the full parameter reference, see the <a href="https://rpiansky3.github.io/PowerGridPlanning.jl/stable/guide/usage/">Usage Guide</a> and <a href="https://rpiansky3.github.io/PowerGridPlanning.jl/stable/reference/api/">API Reference</a>.</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../guide/models/">Models and Methods »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Friday 17 July 2026 15:23">Friday 17 July 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+:plot_dir =&gt; &quot;my_plots&quot;,</code></pre><h2 id="Summary"><a class="docs-heading-anchor" href="#Summary">Summary</a><a id="Summary-1"></a><a class="docs-heading-anchor-permalink" href="#Summary" title="Permalink"></a></h2><table><tr><th style="text-align: right">Step</th><th style="text-align: right">What you did</th></tr><tr><td style="text-align: right">Setup</td><td style="text-align: right">Loaded the package and the bundled reference dataset</td></tr><tr><td style="text-align: right">Baseline</td><td style="text-align: right">DCOPF with no switching — the minimal model</td></tr><tr><td style="text-align: right">Switching</td><td style="text-align: right">Thresholded heuristic vs. optimal MIP with the tradeoff objective</td></tr><tr><td style="text-align: right">Investments</td><td style="text-align: right">Hardening, batteries, and solar under one shared budget</td></tr><tr><td style="text-align: right">Plots</td><td style="text-align: right">Geographic overview, time series, and the Pareto tradeoff curve</td></tr><tr><td style="text-align: right">Customization</td><td style="text-align: right">Objectives, multi-day horizons, solver settings, saving/loading</td></tr><tr><td style="text-align: right">Fidelity</td><td style="text-align: right">LACOTS linearized AC and nonlinear AC verification with <code>verify_ac</code></td></tr><tr><td style="text-align: right">Your data</td><td style="text-align: right">Custom risk dictionaries and user-supplied MATPOWER cases</td></tr></table><p>For the full parameter reference, see the <a href="https://rpiansky3.github.io/PowerGridPlanning.jl/stable/guide/usage/">Usage Guide</a> and <a href="https://rpiansky3.github.io/PowerGridPlanning.jl/stable/reference/api/">API Reference</a>.</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../guide/models/">Models and Methods »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Wednesday 29 July 2026 22:06">Wednesday 29 July 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
