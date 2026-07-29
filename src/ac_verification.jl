@@ -99,6 +99,13 @@ function verify_ac(ac_parameters::Dict, planning_results::Union{Dict,Nothing}=no
     return format_ac_output(results, params)
 end
 
+"""
+    solve_with_ac_feedback(opt_parameters::Dict, ac_parameters::Dict; max_iterations::Int=1)
+
+Run one planning solve with `solve_ots`, verify the fixed planning decisions with
+`verify_ac`, and return the planning results, AC results, and diagnostic feedback
+hints. The feedback loop currently supports a single planning/verification pass.
+"""
 function solve_with_ac_feedback(opt_parameters::Dict, ac_parameters::Dict; max_iterations::Int=1)
     max_iterations == 1 ||
         error("solve_with_ac_feedback currently supports max_iterations=1 only.")
@@ -989,6 +996,13 @@ function format_ac_output(results::Dict, params::Dict)
     end
 end
 
+"""
+    write_ac_diagnostic_report(results::Dict, filepath::String)
+
+Write a Markdown AC diagnostic report from `verify_ac` results. The report
+summarizes feasibility, violation counts, top violations, and feedback hints,
+creating the destination directory when needed.
+"""
 function write_ac_diagnostic_report(results::Dict, filepath::String)
     dir = dirname(filepath)
     if !isempty(dir) && !isdir(dir)
