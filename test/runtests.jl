@@ -244,6 +244,65 @@ end
         :times => [(2020, 6, 15)], :data_dir => "test_data",
         :allocate_mw => 100.0, :allocate_candidate_buses => "all",
     ))
+
+    @test_throws ErrorException solve_opf(Dict(
+        :network => "RTS", :model => "DCOPF", :objective => "loadshed",
+        :times => [(2020, 6, 15)], :data_dir => "test_data",
+        :generator_ramping_enabled => true, :generator_ramp_multiplier => -1.0,
+    ))
+    @test_throws ErrorException solve_opf(Dict(
+        :network => "RTS", :model => "DCOPF", :objective => "loadshed",
+        :times => [(2020, 6, 15)], :data_dir => "test_data",
+        :generator_ramping_enabled => true, :generator_ramp_field => :ramp_30,
+    ))
+    @test_throws ErrorException solve_opf(Dict(
+        :network => "RTS", :model => "DCOPF", :objective => "loadshed",
+        :times => [(2020, 6, 15)], :data_dir => "test_data",
+        :generator_ramping_enabled => true, :generator_ramp_default => "none",
+    ))
+    @test_throws ErrorException solve_opf(Dict(
+        :network => "RTS", :model => "DCOPF", :objective => "loadshed",
+        :times => [(2020, 6, 15)], :data_dir => "test_data",
+        :unit_commitment_enabled => true, :uc_min_up_time => 0,
+    ))
+    @test_throws ErrorException solve_opf(Dict(
+        :network => "RTS", :model => "DCOPF", :objective => "loadshed",
+        :times => [(2020, 6, 15)], :data_dir => "test_data",
+        :unit_commitment_enabled => true, :uc_initial_status => Dict(1 => 2.0),
+    ))
+    @test_throws ErrorException solve_opf(Dict(
+        :network => "RTS", :model => "DCOPF", :objective => "loadshed",
+        :times => [(2020, 6, 15)], :data_dir => "test_data",
+        :unit_commitment_enabled => true, :uc_no_load_cost => -1.0,
+    ))
+
+    rts_case = joinpath(TEST_DATA, "networks", "RTS_GMLC.m")
+    ref = PowerGridPlanning.build_ref(PowerIO.to_powermodels(PowerIO.parse_file(rts_case)))
+    gen_ids = sort(collect(keys(ref[:gen])))
+    bad_gen = maximum(gen_ids) + 10_000
+    full_status = Dict(g => 0.0 for g in gen_ids)
+    full_dispatch = Dict(g => 0.0 for g in gen_ids)
+    full_dispatch[first(gen_ids)] = 1e9
+
+    @test_throws ErrorException solve_opf(Dict(
+        :network => "RTS", :model => "DCOPF", :objective => "loadshed",
+        :times => [(2020, 6, 15)], :data_dir => "test_data",
+        :unit_commitment_enabled => true,
+        :uc_min_up_time => Dict(bad_gen => 2),
+    ))
+    @test_throws ErrorException solve_opf(Dict(
+        :network => "RTS", :model => "DCOPF", :objective => "loadshed",
+        :times => [(2020, 6, 15)], :data_dir => "test_data",
+        :unit_commitment_enabled => true,
+        :uc_min_down_time => Dict(first(gen_ids) => 2),
+    ))
+    @test_throws ErrorException solve_opf(Dict(
+        :network => "RTS", :model => "DCOPF", :objective => "loadshed",
+        :times => [(2020, 6, 15)], :data_dir => "test_data",
+        :unit_commitment_enabled => true,
+        :uc_initial_status => full_status,
+        :uc_initial_dispatch => full_dispatch,
+    ))
 end
 
 # ── 8a. User-supplied networks (pre-solver validation) ───────────────────────
@@ -507,6 +566,8 @@ HIGHS_AVAILABLE && @eval using HiGHS
             :optimizer  => HiGHS.Optimizer,
             :time_limit => 300.0,
         )
+        rts_ref = PowerGridPlanning.build_ref(PowerIO.to_powermodels(PowerIO.parse_file(joinpath(TEST_DATA, "networks", "RTS_GMLC.m"))))
+        gen_ids = sort(collect(keys(rts_ref[:gen])))
 
         # DCOTS: MIP with binary switching variables
         r_ots = solve_ots(merge(base, Dict{Symbol,Any}(:model => "DCOTS")))
@@ -521,6 +582,77 @@ HIGHS_AVAILABLE && @eval using HiGHS
         @test r_opf[:status] in (MOI.OPTIMAL, MOI.TIME_LIMIT)
         @test r_opf[:total_load_shed] >= -1e-6
         @test isempty(r_opf[:switched_off_lines][1])
+
+        r_ramp = solve_opf(merge(base, Dict{Symbol,Any}(
+            :model => "DCOPF",
+            :generator_ramping_enabled => true,
+            :generator_ramp_field => "missing_ramp_field",
+        )))
+        @test r_ramp[:status] in (MOI.OPTIMAL, MOI.TIME_LIMIT)
+        @test !haskey(r_ramp, :u)
+        @test !haskey(r_ramp, :total_startup_cost)
+        for g in gen_ids
+            ramp = rts_ref[:gen][g]["pmax"] + 1e-6
+            prev = clamp(Float64(get(rts_ref[:gen][g], "pg", 0.0)),
+                         min(max(Float64(get(rts_ref[:gen][g], "pmin", 0.0)), 0.0), Float64(rts_ref[:gen][g]["pmax"])),
+                         Float64(rts_ref[:gen][g]["pmax"]))
+            for t in 1:base[:T]
+                now = r_ramp[:g][1, t, g]
+                @test abs(now - prev) <= ramp
+                prev = now
+            end
+        end
+
+        r_uc = solve_opf(merge(base, Dict{Symbol,Any}(
+            :model => "DCOPF",
+            :objective => "cost",
+            :unit_commitment_enabled => true,
+            :uc_min_up_time => 2,
+            :uc_no_load_cost => 1.0,
+            :T => 2,
+        )))
+        @test r_uc[:status] in (MOI.OPTIMAL, MOI.TIME_LIMIT)
+        @test haskey(r_uc, :u) && haskey(r_uc, :startup) && haskey(r_uc, :shutdown)
+        @test haskey(r_uc, :total_startup_cost)
+        for g in gen_ids, t in 1:2
+            pmin = min(max(Float64(get(rts_ref[:gen][g], "pmin", 0.0)), 0.0), Float64(rts_ref[:gen][g]["pmax"]))
+            pmax = Float64(rts_ref[:gen][g]["pmax"])
+            @test r_uc[:g][1, t, g] >= pmin * r_uc[:u][1, t, g] - 1e-5
+            @test r_uc[:g][1, t, g] <= pmax * r_uc[:u][1, t, g] + 1e-5
+        end
+
+        r_uc_ramp = solve_opf(merge(base, Dict{Symbol,Any}(
+            :model => "DCOPF",
+            :unit_commitment_enabled => true,
+            :generator_ramping_enabled => true,
+            :T => 2,
+        )))
+        @test r_uc_ramp[:status] in (MOI.OPTIMAL, MOI.TIME_LIMIT)
+        @test haskey(r_uc_ramp, :u)
+        @test !haskey(r_uc_ramp, :total_startup_cost)
+        for g in gen_ids, t in 1:2
+            gen = rts_ref[:gen][g]
+            initial = (get(gen, "gen_status", 1) != 0 &&
+                       (Float64(get(gen, "pg", 0.0)) > 1e-8 || Float64(get(gen, "pmin", 0.0)) > 0.0)) ? 1.0 : 0.0
+            prev_u = t == 1 ? initial : r_uc_ramp[:u][1, t - 1, g]
+            @test isapprox(r_uc_ramp[:u][1, t, g] - prev_u,
+                           r_uc_ramp[:startup][1, t, g] - r_uc_ramp[:shutdown][1, t, g],
+                           atol=1e-5)
+        end
+
+        r_lac_uc = solve_opf(merge(base, Dict{Symbol,Any}(
+            :model => "LACOPF",
+            :unit_commitment_enabled => true,
+            :T => 1,
+        )))
+        @test r_lac_uc[:status] in (MOI.OPTIMAL, MOI.TIME_LIMIT)
+        @test haskey(r_lac_uc, :u) && haskey(r_lac_uc, :qg)
+        for g in gen_ids
+            if r_lac_uc[:u][1, 1, g] <= 1e-5
+                @test abs(r_lac_uc[:pg][1, 1, g]) <= 1e-5
+                @test abs(r_lac_uc[:qg][1, 1, g]) <= 1e-5
+            end
+        end
 
         # Thresholded switching: statuses pre-computed, LP solve
         r_thr = solve_ots(merge(base, Dict{Symbol,Any}(

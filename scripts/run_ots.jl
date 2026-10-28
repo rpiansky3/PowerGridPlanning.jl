@@ -105,6 +105,40 @@ function parse_commandline()
             arg_type = Int
             default = 24
 
+        # Generator operating constraints
+        "--generator-ramping"
+            help = "Enable inter-hour active-power generator ramping constraints"
+            action = :store_true
+
+        "--generator-ramp-field"
+            help = "Generator data field used for ramping limits"
+            arg_type = String
+            default = "ramp_30"
+
+        "--generator-ramp-multiplier"
+            help = "Multiplier applied to the selected ramp field (default converts 30-minute ramp to hourly)"
+            arg_type = Float64
+            default = 2.0
+
+        "--unit-commitment"
+            help = "Enable binary generator unit commitment"
+            action = :store_true
+
+        "--uc-min-up-time"
+            help = "Minimum generator up time in modeled hours"
+            arg_type = Int
+            default = 1
+
+        "--uc-min-down-time"
+            help = "Minimum generator down time in modeled hours"
+            arg_type = Int
+            default = 1
+
+        "--uc-no-load-cost"
+            help = "No-load cost per committed generator-hour for cost objective"
+            arg_type = Float64
+            default = 0.0
+
         # Hardening parameters
         "--hardening"
             help = "Enable line hardening (undergrounding)"
@@ -288,6 +322,19 @@ function build_opt_parameters(args::Dict)
         opt_parameters[:risk_metric] = args["risk-metric"]
     end
 
+    if args["generator-ramping"]
+        opt_parameters[:generator_ramping_enabled] = true
+        opt_parameters[:generator_ramp_field] = args["generator-ramp-field"]
+        opt_parameters[:generator_ramp_multiplier] = args["generator-ramp-multiplier"]
+    end
+
+    if args["unit-commitment"]
+        opt_parameters[:unit_commitment_enabled] = true
+        opt_parameters[:uc_min_up_time] = args["uc-min-up-time"]
+        opt_parameters[:uc_min_down_time] = args["uc-min-down-time"]
+        opt_parameters[:uc_no_load_cost] = args["uc-no-load-cost"]
+    end
+
     # Add output parameters
     if args["save"] !== nothing
         save_path = args["save"]
@@ -432,6 +479,16 @@ function print_results_summary(results::Dict, quiet::Bool=false)
         @printf("   Total Generation:    %.4f p.u.·h\n", results[:total_solar_generation])
         if haskey(results, :total_solar_q_injection)
             @printf("   Total Q Injection:   %.4f p.u.·h\n", results[:total_solar_q_injection])
+        end
+    end
+
+    if haskey(results, :u)
+        println("\nGenerator Unit Commitment")
+        @printf("   Committed Gen-Hours: %.0f\n", sum(results[:u]))
+        if haskey(results, :total_startup_cost)
+            @printf("   Startup Cost:        \$%.2fM\n", results[:total_startup_cost] / 1e6)
+            @printf("   Shutdown Cost:       \$%.2fM\n", results[:total_shutdown_cost] / 1e6)
+            @printf("   No-Load Cost:        \$%.2fM\n", results[:total_no_load_cost] / 1e6)
         end
     end
 

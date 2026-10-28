@@ -370,6 +370,16 @@ function set_defaults!(opt_parameters::Dict)
         :output_path => nothing,
         :risk_metric => "cum_wfpi",  # For CATS: max_wfpi, mean_wfpi, cum_wfpi, etc.
         :wildfire_data => nothing,    # Will be auto-loaded if not provided
+        :generator_ramping_enabled => false,
+        :unit_commitment_enabled => false,
+        :generator_ramp_field => "ramp_30",
+        :generator_ramp_multiplier => 2.0,
+        :generator_ramp_default => "pmax",
+        :uc_min_up_time => 1,
+        :uc_min_down_time => 1,
+        :uc_initial_status => nothing,
+        :uc_initial_dispatch => nothing,
+        :uc_no_load_cost => 0.0,
         :lp_str => "",                # If provided, save model to LP file at this path
         :log_str => "",               # If provided, save Gurobi log to file at this path
         :plots => false,              # false/"none"/"all"/"inv_only"/"timeseries_only"

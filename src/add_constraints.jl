@@ -314,6 +314,8 @@ function add_dcots_constraints!(model::JuMP.Model, preprocessed::Dict, opt_param
         end
     end
 
+    add_generator_operating_constraints!(model, preprocessed, opt_parameters, g)
+
     # Bus power balance constraints
     for d in 1:D, t in 1:T
         for k in bus_names
@@ -734,6 +736,8 @@ function add_lacots_constraints!(model::JuMP.Model, preprocessed::Dict, opt_para
         end
     end
 
+    add_generator_operating_constraints!(model, preprocessed, opt_parameters, pg, qg)
+
     # Bus power balance constraints
     for d in 1:D, t in 1:T
         for k in bus_names
@@ -809,5 +813,113 @@ function add_lacots_constraints!(model::JuMP.Model, preprocessed::Dict, opt_para
                 + solar_q_injection
             )
         end
+    end
+end
+
+function add_generator_operating_constraints!(model::JuMP.Model, preprocessed::Dict,
+                                              opt_parameters::Dict, active_gen_var,
+                                              reactive_gen_var=nothing)
+    uc_enabled = get(opt_parameters, :unit_commitment_enabled, false)
+    ramping_enabled = get(opt_parameters, :generator_ramping_enabled, false)
+    (!uc_enabled && !ramping_enabled) && return
+
+    D = preprocessed[:D]
+    T = preprocessed[:T]
+    gen_names = model[:metadata][:gen_names]
+
+    if uc_enabled
+        add_unit_commitment_constraints!(model, preprocessed, active_gen_var, reactive_gen_var, gen_names, D, T)
+    end
+
+    if ramping_enabled
+        add_generator_ramping_constraints!(model, preprocessed, opt_parameters, active_gen_var, gen_names, D, T)
+    end
+end
+
+function add_unit_commitment_constraints!(model::JuMP.Model, preprocessed::Dict,
+                                          active_gen_var, reactive_gen_var,
+                                          gen_names, D::Int, T::Int)
+    u = model[:u]
+    startup = model[:startup]
+    shutdown = model[:shutdown]
+    pmin_eff = preprocessed[:gen_pmin_eff]
+    pmax_eff = preprocessed[:gen_pmax_eff]
+    initial_status = preprocessed[:uc_initial_status_by_gen]
+    min_up = preprocessed[:uc_min_up]
+    min_down = preprocessed[:uc_min_down]
+    ref = preprocessed[:base_ref]
+
+    for d in 1:D, t in 1:T, g in gen_names
+        prev = previous_period(d, t, T)
+        prev_u = prev === nothing ? initial_status[g] : u[prev..., g]
+
+        @constraint(model, u[d, t, g] - prev_u == startup[d, t, g] - shutdown[d, t, g])
+        @constraint(model, startup[d, t, g] + shutdown[d, t, g] <= 1)
+        @constraint(model, active_gen_var[d, t, g] >= pmin_eff[(d, t, g)] * u[d, t, g])
+        @constraint(model, active_gen_var[d, t, g] <= pmax_eff[(d, t, g)] * u[d, t, g])
+
+        if reactive_gen_var !== nothing
+            @constraint(model, reactive_gen_var[d, t, g] >= ref[:gen][g]["qmin"] * u[d, t, g])
+            @constraint(model, reactive_gen_var[d, t, g] <= ref[:gen][g]["qmax"] * u[d, t, g])
+        end
+    end
+
+    horizon = [(d, t) for d in 1:D for t in 1:T]
+    for g in gen_names
+        up_time = min_up[g]
+        down_time = min_down[g]
+        for k in eachindex(horizon)
+            d, t = horizon[k]
+            up_window = max(1, k - up_time + 1):k
+            down_window = max(1, k - down_time + 1):k
+
+            @constraint(model, sum(startup[horizon[j]..., g] for j in up_window) <= u[d, t, g])
+            @constraint(model, sum(shutdown[horizon[j]..., g] for j in down_window) <= 1 - u[d, t, g])
+        end
+    end
+
+    println("✓ Added unit commitment constraints")
+end
+
+function add_generator_ramping_constraints!(model::JuMP.Model, preprocessed::Dict, opt_parameters::Dict,
+                                            active_gen_var, gen_names, D::Int, T::Int)
+    uc_enabled = get(opt_parameters, :unit_commitment_enabled, false)
+    ramp_limit = preprocessed[:gen_ramp_limit]
+    initial_dispatch = preprocessed[:uc_initial_dispatch_by_gen]
+    initial_status = preprocessed[:uc_initial_status_by_gen]
+    pmax_eff = preprocessed[:gen_pmax_eff]
+
+    if uc_enabled
+        u = model[:u]
+        startup = model[:startup]
+        shutdown = model[:shutdown]
+    end
+
+    for d in 1:D, t in 1:T, g in gen_names
+        prev = previous_period(d, t, T)
+        p_now = active_gen_var[d, t, g]
+        p_prev = prev === nothing ? initial_dispatch[g] : active_gen_var[prev..., g]
+
+        if uc_enabled
+            u_prev = prev === nothing ? initial_status[g] : u[prev..., g]
+            pmax_prev = prev === nothing ? initial_dispatch[g] : pmax_eff[(prev[1], prev[2], g)]
+            @constraint(model, p_now - p_prev <= ramp_limit[g] * u_prev + pmax_eff[(d, t, g)] * startup[d, t, g])
+            @constraint(model, p_prev - p_now <= ramp_limit[g] * u[d, t, g] + pmax_prev * shutdown[d, t, g])
+        else
+            @constraint(model, p_now - p_prev <= ramp_limit[g])
+            @constraint(model, p_prev - p_now <= ramp_limit[g])
+        end
+    end
+
+    println("✓ Added generator ramping constraints")
+end
+
+function previous_period(d::Int, t::Int, T::Int)
+    if d == 1 && t == 1
+        return nothing
+    elseif t == 1
+        return (d - 1, T)
+    else
+        return (d, t - 1)
     end
 end

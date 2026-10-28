@@ -148,6 +148,8 @@ function add_dcots_variables!(model::JuMP.Model, preprocessed::Dict, opt_paramet
     end
     @variable(model, g_lb[d, t, i] <= g[d=1:D, t=1:T, i=gen_names] <= g_ub[d, t, i])
 
+    add_unit_commitment_variables!(model, opt_parameters, D, T, gen_names)
+
     # Power flows
     p_lb = Containers.DenseAxisArray{Float64}(undef, 1:D, 1:T, branch_names)
     p_ub = Containers.DenseAxisArray{Float64}(undef, 1:D, 1:T, branch_names)
@@ -370,6 +372,8 @@ function add_lacots_variables!(model::JuMP.Model, preprocessed::Dict, opt_parame
     end
     @variable(model, qg_lb[d, t, i] <= qg[d=1:D, t=1:T, i=gen_names] <= qg_ub[d, t, i])
 
+    add_unit_commitment_variables!(model, opt_parameters, D, T, gen_names)
+
     # Active power flows
     p_lb = Containers.DenseAxisArray{Float64}(undef, 1:D, 1:T, branch_names)
     p_ub = Containers.DenseAxisArray{Float64}(undef, 1:D, 1:T, branch_names)
@@ -502,4 +506,31 @@ function add_lacots_variables!(model::JuMP.Model, preprocessed::Dict, opt_parame
     q_expr = merge(q_expr, Dict((d, t, (l, j, i)) => -1.0 * q[d, t, (l, i, j)] for d in 1:D for t in 1:T for (l, i, j) in branch_names))
 
     return Dict(:p_expr => p_expr, :q_expr => q_expr)
+end
+
+function add_unit_commitment_variables!(model::JuMP.Model, opt_parameters::Dict, D::Int, T::Int, gen_names)
+    if !get(opt_parameters, :unit_commitment_enabled, false)
+        return
+    end
+
+    @variable(model, u[d=1:D, t=1:T, g=gen_names], Bin)
+    @variable(model, startup[d=1:D, t=1:T, g=gen_names], Bin)
+    @variable(model, shutdown[d=1:D, t=1:T, g=gen_names], Bin)
+
+    warm_start = opt_parameters[:warm_start]
+    if warm_start !== nothing && warm_start != "auto"
+        for (name, var_symbol) in (("u", :u), ("startup", :startup), ("shutdown", :shutdown))
+            if haskey(warm_start, name)
+                vals = warm_start[name]
+                var = model[var_symbol]
+                for d in 1:D, t in 1:T, g in gen_names
+                    if haskey(vals, (d, t, g))
+                        set_start_value(var[d, t, g], vals[(d, t, g)])
+                    end
+                end
+            end
+        end
+    end
+
+    println("✓ Added unit commitment variables for $(length(gen_names)) generators")
 end

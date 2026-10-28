@@ -55,6 +55,26 @@
 - **Cons**: Switching decisions are suboptimal; threshold parameter is required
 - **Use cases**: Large-scale studies, Monte Carlo analysis, initial screening
 
+## Generator Ramping and Unit Commitment
+
+Generator ramping and unit commitment are optional for `DCOTS`, `DCOPF`, `LACOTS`, and `LACOPF`; both are disabled by default.
+
+**Generator ramping** adds symmetric active-power inter-hour ramp limits. The default ramp source is generator field `ramp_30` multiplied by `2.0`, so MATPOWER 30-minute ramp data is converted to an hourly limit. Missing or nonpositive ramp data falls back to generator `pmax`.
+
+**Unit commitment** adds binary `u[d,t,g]`, `startup[d,t,g]`, and `shutdown[d,t,g]` variables. Active dispatch is coupled to effective `pmin`/`pmax` limits, and linear-AC models also force reactive dispatch off when a generator is off. Minimum up/down times are measured in modeled hours; defaults of `1` are nonrestrictive.
+
+When ramping and unit commitment are both enabled, ramp limits are relaxed for startup and shutdown transitions using the commitment variables. Initial status defaults to on only for online generators with positive dispatch or positive `pmin`; otherwise it defaults to off. Initial dispatch defaults to case `pg`, then `(pmin + pmax) / 2`, then `0.0`, clamped to feasible bounds; if initial status is off, initial dispatch is `0.0`.
+
+The Julia API accepts per-generator dictionaries for `:uc_min_up_time`, `:uc_min_down_time`, `:uc_initial_status`, `:uc_initial_dispatch`, and `:uc_no_load_cost`. The CLI supports scalar UC/ramping controls only.
+
+For the `"cost"` objective only, unit commitment adds generator `startup` and `shutdown` costs when those fields are present, plus `:uc_no_load_cost` for each committed generator-hour.
+
+This feature is covered in CI with HiGHS-based RTS smoke tests. It has also been manually validated with Gurobi on the following larger configurations:
+
+- RTS `DCOPF`, `"cost"` objective, 3 modeled days, 24 hours per day, unit commitment plus ramping, `:uc_min_up_time => 2`, `:uc_min_down_time => 2`
+- CATS `DCOPF`, `"loadshed"` objective, 1 modeled day, 24 hours, unit commitment plus ramping
+- RTS single-day 24-hour edge cases: ramping-only `DCOPF`, UC-only `DCOPF`, UC+ramping `DCOPF` with all generators initially off, UC+ramping `LACOPF`, and UC+ramping `DCOTS`
+
 ## Objective Functions
 
 | Objective | Description | Primary Term | Secondary Term | OPF-only models |

@@ -44,6 +44,17 @@ julia --project=. scripts/run_ots.jl --network RTS --objective loadshed --date 2
 - `--quiet, -q` - Suppress detailed output
 - `--T` - Hours per day (default: 24)
 
+**Generator Operations:**
+- `--generator-ramping` - Enable inter-hour active-power generator ramping
+- `--generator-ramp-field` - Generator data field for ramp limits (default: `ramp_30`)
+- `--generator-ramp-multiplier` - Multiplier applied to ramp data (default: `2.0`)
+- `--unit-commitment` - Enable binary generator commitment variables
+- `--uc-min-up-time` - Minimum generator up time in modeled hours (default: `1`)
+- `--uc-min-down-time` - Minimum generator down time in modeled hours (default: `1`)
+- `--uc-no-load-cost` - No-load cost per committed generator-hour for cost objective (default: `0.0`)
+
+Per-generator UC dictionaries are supported through the Julia API, not CLI flags.
+
 **Hardening Parameters:**
 - `--hardening` - Enable line hardening optimization (vegetation management, covered conductors, or undergrounding)
 - `--hardening-effectiveness` - Risk reduction effectiveness, 0-1 (default: 1.0)
@@ -179,6 +190,19 @@ julia --project=. scripts/run_ots.jl \
     --threshold-pct 0.5 \
     --hardening \
     --hardening-budget 100000000
+```
+
+**Example 11: DCOPF with unit commitment and ramping**
+```bash
+julia --project=. scripts/run_ots.jl \
+    --network RTS \
+    --model DCOPF \
+    --objective cost \
+    --date 2021-07-15 \
+    --unit-commitment \
+    --generator-ramping \
+    --uc-min-up-time 3 \
+    --uc-min-down-time 2
 ```
 
 ## CLI Output

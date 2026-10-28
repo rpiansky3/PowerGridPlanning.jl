@@ -279,6 +279,21 @@ function add_cost_objective!(model::JuMP.Model, preprocessed::Dict, opt_paramete
     # Total cost = generation cost + VOLL * load shed + hardening cost + battery cost
     total_cost = gen_cost + voll * nonneg_loadshed
 
+    if get(opt_parameters, :unit_commitment_enabled, false)
+        startup = model[:startup]
+        shutdown = model[:shutdown]
+        no_load = preprocessed[:uc_no_load_cost_by_gen]
+        u = model[:u]
+
+        startup_cost = sum(get(ref[:gen][i], "startup", 0.0) * startup[d, t, i]
+                           for d in 1:D for t in 1:T for i in gen_names; init=0.0)
+        shutdown_cost = sum(get(ref[:gen][i], "shutdown", 0.0) * shutdown[d, t, i]
+                            for d in 1:D for t in 1:T for i in gen_names; init=0.0)
+        no_load_cost = sum(no_load[i] * u[d, t, i]
+                           for d in 1:D for t in 1:T for i in gen_names; init=0.0)
+        total_cost += startup_cost + shutdown_cost + no_load_cost
+    end
+
     # Add hardening cost if enabled
     if get(opt_parameters, :hardening_enabled, false)
         hardenable_lines = opt_parameters[:hardenable_lines]

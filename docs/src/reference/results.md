@@ -14,6 +14,9 @@ The `solve_ots()` and `solve_opf()` planning functions return dictionaries with 
 - `:p` - Real power flows `[D × T × branches]` (MW)
 - `:g` or `:pg` - Real power generation `[D × T × generators]` (MW)
 - `:load_shedding` or `:p_load_shedding` - Load shedding `[D × T × buses]` (MW)
+- `:u` - Generator commitment `[D × T × generators]` (1=on, 0=off; only when unit commitment is enabled)
+- `:startup` - Generator startup indicator `[D × T × generators]` (only when unit commitment is enabled)
+- `:shutdown` - Generator shutdown indicator `[D × T × generators]` (only when unit commitment is enabled)
 
 **LACOTS only:**
 - `:vm` - Voltage magnitudes `[D × T × buses]` (per unit)
@@ -58,6 +61,11 @@ The `solve_ots()` and `solve_opf()` planning functions return dictionaries with 
 - `:solar_cost` - Total solar installation cost in USD
 - `:total_solar_generation` - Total active power generated (p.u.·h)
 - `:total_solar_q_injection` - Total reactive power injected (LACOTS only, p.u.·h)
+
+**Unit Commitment Cost Results (if unit commitment and cost objective enabled):**
+- `:total_startup_cost` - Total generator startup cost in USD
+- `:total_shutdown_cost` - Total generator shutdown cost in USD
+- `:total_no_load_cost` - Total no-load commitment cost in USD
 
 **Notes:**
 - For the thresholded method, `:z` values are pre-computed fixed scalars (0 or 1), not optimization variables

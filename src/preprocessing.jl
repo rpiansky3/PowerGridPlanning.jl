@@ -114,6 +114,9 @@ function preprocess(opt_parameters::Dict)
         end
     end
 
+    # Generator ramping and unit commitment share generator operating metadata.
+    prepare_generator_operating_data!(preprocessed, opt_parameters)
+
     # Load wildfire data if not provided.
     # OPF-only models (DCOPF/LACOPF) ignore wildfire risk entirely — install an
     # empty per-day risk dict so downstream code sees zero risky lines.
@@ -1555,6 +1558,212 @@ function validate_risk_per_line(risk_data::Dict, D::Int)
     println("  - $D days of data")
     println("  - $total_entries total line-day risk entries")
     println("  - Min/Max risky lines per day: $min_risky/$max_risky")
+end
+
+"""
+    prepare_generator_operating_data!(preprocessed::Dict, opt_parameters::Dict)
+
+Validate ramping / unit commitment parameters and cache per-generator operating
+limits used by all DC and linear-AC formulations.
+"""
+function prepare_generator_operating_data!(preprocessed::Dict, opt_parameters::Dict)
+    validate_generator_operating_parameters!(opt_parameters)
+
+    ref = preprocessed[:base_ref]
+    D = preprocessed[:D]
+    T = preprocessed[:T]
+    is_cats = preprocessed[:is_cats]
+    gen_names = sort(collect(keys(ref[:gen])))
+
+    gen_pmin_eff = Dict{Tuple{Int,Int,Int},Float64}()
+    gen_pmax_eff = Dict{Tuple{Int,Int,Int},Float64}()
+    for d in 1:D, t in 1:T, g in gen_names
+        pmin_eff, pmax_eff = effective_generator_bounds(preprocessed, d, t, g)
+        gen_pmin_eff[(d, t, g)] = pmin_eff
+        gen_pmax_eff[(d, t, g)] = pmax_eff
+    end
+
+    ramp_field = opt_parameters[:generator_ramp_field]
+    ramp_multiplier = opt_parameters[:generator_ramp_multiplier]
+    gen_ramp_limit = Dict{Int,Float64}()
+    for g in gen_names
+        gen_ramp_limit[g] = generator_ramp_limit(ref[:gen][g], ramp_field, ramp_multiplier)
+    end
+
+    initial_status_input = opt_parameters[:uc_initial_status]
+    initial_dispatch_input = opt_parameters[:uc_initial_dispatch]
+    uc_min_up_input = opt_parameters[:uc_min_up_time]
+    uc_min_down_input = opt_parameters[:uc_min_down_time]
+    no_load_input = opt_parameters[:uc_no_load_cost]
+
+    validate_generator_key_coverage(initial_status_input, :uc_initial_status, gen_names)
+    validate_generator_key_coverage(initial_dispatch_input, :uc_initial_dispatch, gen_names)
+    validate_generator_key_coverage(uc_min_up_input, :uc_min_up_time, gen_names)
+    validate_generator_key_coverage(uc_min_down_input, :uc_min_down_time, gen_names)
+    validate_generator_key_coverage(no_load_input, :uc_no_load_cost, gen_names)
+
+    uc_initial_status_by_gen = Dict{Int,Float64}()
+    uc_initial_dispatch_by_gen = Dict{Int,Float64}()
+    uc_min_up = Dict{Int,Int}()
+    uc_min_down = Dict{Int,Int}()
+    uc_no_load_cost_by_gen = Dict{Int,Float64}()
+
+    for g in gen_names
+        gen = ref[:gen][g]
+        pmin0 = gen_pmin_eff[(1, 1, g)]
+        pmax0 = gen_pmax_eff[(1, 1, g)]
+
+        status_val = initial_status_input === nothing ? default_initial_status(gen, pmin0) : Float64(initial_status_input[g])
+        status = status_val >= 0.5 ? 1.0 : 0.0
+        dispatch_val = initial_dispatch_input === nothing ? default_initial_dispatch(gen, pmin0, pmax0) : Float64(initial_dispatch_input[g])
+
+        if dispatch_val > pmax0 + 1e-8
+            error("uc_initial_dispatch for generator $g exceeds pmax $(pmax0): $dispatch_val")
+        end
+        if status == 1.0 && dispatch_val < pmin0 - 1e-8
+            error("uc_initial_dispatch for committed generator $g is below pmin $(pmin0): $dispatch_val")
+        end
+
+        uc_initial_status_by_gen[g] = status
+        uc_initial_dispatch_by_gen[g] = status == 0.0 ? 0.0 : clamp(dispatch_val, pmin0, pmax0)
+        uc_min_up[g] = uc_min_up_input isa Dict ? Int(uc_min_up_input[g]) : Int(uc_min_up_input)
+        uc_min_down[g] = uc_min_down_input isa Dict ? Int(uc_min_down_input[g]) : Int(uc_min_down_input)
+        uc_no_load_cost_by_gen[g] = no_load_input isa Dict ? Float64(no_load_input[g]) : Float64(no_load_input)
+    end
+
+    preprocessed[:gen_pmin_eff] = gen_pmin_eff
+    preprocessed[:gen_pmax_eff] = gen_pmax_eff
+    preprocessed[:gen_ramp_limit] = gen_ramp_limit
+    preprocessed[:uc_min_up] = uc_min_up
+    preprocessed[:uc_min_down] = uc_min_down
+    preprocessed[:uc_initial_status_by_gen] = uc_initial_status_by_gen
+    preprocessed[:uc_initial_dispatch_by_gen] = uc_initial_dispatch_by_gen
+    preprocessed[:uc_no_load_cost_by_gen] = uc_no_load_cost_by_gen
+end
+
+function effective_generator_bounds(preprocessed::Dict, d::Int, t::Int, g::Int)
+    ref = preprocessed[:base_ref]
+    pmax_eff = if preprocessed[:is_cats]
+        preprocessed[:hourly_refs][d][t][:gen][g]["pmax"]
+    else
+        ref[:gen][g]["pmax"]
+    end
+    pmax_eff = max(Float64(pmax_eff), 0.0)
+    pmin_eff = min(max(Float64(get(ref[:gen][g], "pmin", 0.0)), 0.0), pmax_eff)
+    return pmin_eff, pmax_eff
+end
+
+function generator_ramp_limit(gen::Dict, ramp_field::String, ramp_multiplier::Float64)
+    pmax = max(Float64(get(gen, "pmax", 0.0)), 0.0)
+    raw_ramp = get(gen, ramp_field, nothing)
+    return (raw_ramp isa Real && raw_ramp > 0) ? Float64(raw_ramp) * ramp_multiplier : pmax
+end
+
+function default_initial_status(gen::Dict, pmin::Float64)
+    online = get(gen, "gen_status", 1) != 0
+    dispatched = Float64(get(gen, "pg", 0.0)) > 1e-8
+    must_run = pmin > 0.0
+    return online && (dispatched || must_run) ? 1.0 : 0.0
+end
+
+function default_initial_dispatch(gen::Dict, pmin::Float64, pmax::Float64)
+    dispatch = if haskey(gen, "pg") && gen["pg"] isa Real
+        Float64(gen["pg"])
+    elseif pmax > 0.0
+        (pmin + pmax) / 2
+    else
+        0.0
+    end
+    return clamp(dispatch, pmin, pmax)
+end
+
+function validate_generator_operating_parameters!(opt_parameters::Dict)
+    ramp_enabled = get(opt_parameters, :generator_ramping_enabled, false)
+    uc_enabled = get(opt_parameters, :unit_commitment_enabled, false)
+
+    ramp_field = get(opt_parameters, :generator_ramp_field, "ramp_30")
+    if !(ramp_field isa AbstractString) || isempty(strip(ramp_field))
+        error("generator_ramp_field must be a non-empty String, got $(typeof(ramp_field))")
+    end
+    opt_parameters[:generator_ramp_field] = String(ramp_field)
+
+    ramp_multiplier = get(opt_parameters, :generator_ramp_multiplier, 2.0)
+    if !(ramp_multiplier isa Real) || ramp_multiplier <= 0
+        error("generator_ramp_multiplier must be positive, got $ramp_multiplier")
+    end
+    opt_parameters[:generator_ramp_multiplier] = Float64(ramp_multiplier)
+
+    ramp_default = get(opt_parameters, :generator_ramp_default, "pmax")
+    if ramp_default != "pmax"
+        error("generator_ramp_default must be \"pmax\", got $ramp_default")
+    end
+    opt_parameters[:generator_ramp_default] = ramp_default
+
+    min_up = get(opt_parameters, :uc_min_up_time, 1)
+    min_down = get(opt_parameters, :uc_min_down_time, 1)
+    validate_uc_time_parameter(min_up, :uc_min_up_time)
+    validate_uc_time_parameter(min_down, :uc_min_down_time)
+    opt_parameters[:uc_min_up_time] = min_up
+    opt_parameters[:uc_min_down_time] = min_down
+
+    validate_optional_gen_dict(get(opt_parameters, :uc_initial_status, nothing), :uc_initial_status, v -> v isa Real && (v == 0 || v == 1))
+    validate_optional_gen_dict(get(opt_parameters, :uc_initial_dispatch, nothing), :uc_initial_dispatch, v -> v isa Real && v >= 0)
+
+    no_load = get(opt_parameters, :uc_no_load_cost, 0.0)
+    if no_load isa Dict
+        for (g, v) in no_load
+            if !(g isa Integer) || !(v isa Real) || v < 0
+                error("uc_no_load_cost must be a non-negative number or Dict{gen=>cost}; invalid entry $g => $v")
+            end
+        end
+    elseif !(no_load isa Real) || no_load < 0
+        error("uc_no_load_cost must be non-negative, got $no_load")
+    end
+    opt_parameters[:uc_no_load_cost] = no_load
+
+    if ramp_enabled
+        println("✓ Generator ramping enabled: field=$(opt_parameters[:generator_ramp_field]), multiplier=$(opt_parameters[:generator_ramp_multiplier])")
+    end
+    if uc_enabled
+        println("✓ Unit commitment enabled: min_up=$(opt_parameters[:uc_min_up_time]), min_down=$(opt_parameters[:uc_min_down_time])")
+    end
+end
+
+function validate_uc_time_parameter(value, name::Symbol)
+    if value isa Dict
+        for (g, v) in value
+            if !(g isa Integer) || !(v isa Integer) || v < 1
+                error("$name must be a positive integer or Dict{gen=>positive integer}; invalid entry $g => $v")
+            end
+        end
+    elseif !(value isa Integer) || value < 1
+        error("$name must be a positive integer, got $value")
+    end
+end
+
+function validate_optional_gen_dict(value, name::Symbol, value_ok::Function)
+    value === nothing && return
+    if !(value isa Dict)
+        error("$name must be nothing or a Dict keyed by generator id")
+    end
+    for (g, v) in value
+        if !(g isa Integer) || !value_ok(v)
+            error("$name must be keyed by generator id with valid values; invalid entry $g => $v")
+        end
+    end
+end
+
+function validate_generator_key_coverage(value, name::Symbol, gen_names)
+    !(value isa Dict) && return
+    valid = Set(gen_names)
+    invalid = [g for g in keys(value) if !(g in valid)]
+    if !isempty(invalid)
+        error("$name contains unknown generator id(s): $(invalid)")
+    end
+    missing = [g for g in gen_names if !haskey(value, g)]
+    if !isempty(missing)
+        error("$name is missing values for generator id(s): $(missing)")
+    end
 end
 
 """

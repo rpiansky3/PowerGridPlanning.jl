@@ -68,6 +68,18 @@ function run_dcots_for_warmstart(opt_parameters::Dict, preprocessed::Dict)
         warm_start_dict["y"] = y_values
     end
 
+    for name in (:u, :startup, :shutdown)
+        if haskey(dcots_results, name)
+            vals = Dict{Tuple{Int,Int,Int},Float64}()
+            for d in 1:preprocessed[:D], t in 1:preprocessed[:T]
+                for g in keys(preprocessed[:base_ref][:gen])
+                    vals[(d, t, g)] = dcots_results[name][d, t, g]
+                end
+            end
+            warm_start_dict[String(name)] = vals
+        end
+    end
+
     return warm_start_dict
 end
 
@@ -463,6 +475,32 @@ function extract_results(model::JuMP.Model, preprocessed::Dict, opt_parameters::
         results[:total_p_load_shed] = sum(results[:p_load_shedding])
         results[:total_q_load_shed] = sum(results[:q_load_shedding])
         results[:total_load_shed] = results[:total_p_load_shed]  # For consistency
+    end
+
+    if get(opt_parameters, :unit_commitment_enabled, false)
+        u = model[:u]
+        startup = model[:startup]
+        shutdown = model[:shutdown]
+
+        results[:u] = Containers.DenseAxisArray{Float64}(undef, 1:D, 1:T, gen_names)
+        results[:startup] = Containers.DenseAxisArray{Float64}(undef, 1:D, 1:T, gen_names)
+        results[:shutdown] = Containers.DenseAxisArray{Float64}(undef, 1:D, 1:T, gen_names)
+        for d in 1:D, t in 1:T, i in gen_names
+            results[:u][d, t, i] = value(u[d, t, i])
+            results[:startup][d, t, i] = value(startup[d, t, i])
+            results[:shutdown][d, t, i] = value(shutdown[d, t, i])
+        end
+
+        if opt_parameters[:objective] == "cost"
+            ref = preprocessed[:base_ref]
+            no_load = preprocessed[:uc_no_load_cost_by_gen]
+            results[:total_startup_cost] = sum(get(ref[:gen][i], "startup", 0.0) * results[:startup][d, t, i]
+                                               for d in 1:D for t in 1:T for i in gen_names; init=0.0)
+            results[:total_shutdown_cost] = sum(get(ref[:gen][i], "shutdown", 0.0) * results[:shutdown][d, t, i]
+                                                for d in 1:D for t in 1:T for i in gen_names; init=0.0)
+            results[:total_no_load_cost] = sum(no_load[i] * results[:u][d, t, i]
+                                               for d in 1:D for t in 1:T for i in gen_names; init=0.0)
+        end
     end
 
     # Calculate risk metrics
