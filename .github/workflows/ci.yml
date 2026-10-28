@@ -23,8 +23,6 @@ jobs:
         with:
           version: ${{ matrix.julia-version }}
 
-      - uses: julia-actions/cache@v2
-
       - name: Install dependencies
         run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
 
