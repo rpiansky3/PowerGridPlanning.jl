@@ -21,7 +21,7 @@ This package provides a unified interface for transmission grid planning problem
 ## Installation
 
 ### Prerequisites
-- Julia 1.10 or higher (LTS; 1.6+ is technically compatible but 1.10 is recommended)
+- Julia 1.10 or higher
 - Gurobi optimizer with valid license for planning solves (`solve_ots`; [academic licenses available](https://www.gurobi.com/academia/academic-program-and-licenses/))
 - Ipopt is included as the default nonlinear solver for AC verification (`verify_ac`)
 
